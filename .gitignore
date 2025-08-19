@@ -1,0 +1,133 @@
+# Home Assistant Configuration Management - .gitignore
+
+# Secrets and sensitive data
+config/secrets.yaml
+config/.storage/
+config/home-assistant.log*
+config/OZW_Log.txt
+config/ip_bans.yaml
+config/.uuid
+config/.HA_VERSION
+
+# Python
+venv/
+venv
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups
+backups/
+*.backup
+*.tar.gz
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Node modules (if using any JS tools)
+node_modules/
+
+# SSH keys (if accidentally placed here)
+*.pem
+*.key
+id_rsa*
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Home Assistant specific temporary files
+config/deps/
+config/tts/
+config/.shopping_list.json
+config/.google.token
+
+# Personal configuration that shouldn't be shared
+config/known_devices.yaml
+config/automations_backup/
+config/scripts_backup/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation builds
+docs/_build/
+
+# PyCharm
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Development tools
+.pre-commit-cache/
+.flake8
+.pylint.d/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Development artifacts
+.python_check.log
+*.log
+
+# Virtual Environment symlink (points to ../venv)
+# Note: Both venv/ and venv symlink are ignored above
