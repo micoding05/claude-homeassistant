@@ -260,7 +260,7 @@ Located in `.claude-code/settings.json`:
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
+Apache 2.0
 
 ## 🙏 Acknowledgments
 
