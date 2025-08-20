@@ -51,7 +51,7 @@ push:
 # Run all validation tests
 validate: check-setup
 	@echo "$(GREEN)Running Home Assistant configuration validation...$(NC)"
-	@source $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/run_tests.py
+	@. $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/run_tests.py
 
 # Alias for validate
 test: validate
@@ -69,8 +69,8 @@ backup:
 setup:
 	@echo "$(GREEN)Setting up Python environment...$(NC)"
 	@python3 -m venv $(VENV_PATH)
-	@source $(VENV_PATH)/bin/activate && pip install --upgrade pip
-	@source $(VENV_PATH)/bin/activate && pip install homeassistant voluptuous pyyaml jsonschema requests
+	@. $(VENV_PATH)/bin/activate && pip install --upgrade pip
+	@. $(VENV_PATH)/bin/activate && pip install homeassistant voluptuous pyyaml jsonschema requests
 	@echo "$(GREEN)Setup complete!$(NC)"
 
 # Show configuration status
@@ -92,7 +92,7 @@ status: check-setup
 	fi
 	@echo ""
 	@echo "$(YELLOW)Entity Summary:$(NC)"
-	@source $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/reference_validator.py 2>/dev/null | grep "Examples:" -A 1 -B 1 | head -20
+	@. $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/reference_validator.py 2>/dev/null | grep "Examples:" -A 1 -B 1 | head -20
 
 # Explore available Home Assistant entities
 entities: check-setup
@@ -104,7 +104,7 @@ entities: check-setup
 	@echo "  make entities ARGS='--search temp'     - Search for temperature entities"
 	@echo "  make entities ARGS='--full'            - Show complete detailed output"
 	@echo ""
-	@source $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/entity_explorer.py $(ARGS)
+	@. $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/entity_explorer.py $(ARGS)
 
 # Clean up temporary files
 clean:
@@ -134,13 +134,13 @@ pull-storage:
 
 # Individual validation targets
 validate-yaml: check-setup
-	@source $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/yaml_validator.py
+	@. $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/yaml_validator.py
 
 validate-references: check-setup
-	@source $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/reference_validator.py
+	@. $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/reference_validator.py
 
 validate-ha: check-setup
-	@source $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/ha_official_validator.py
+	@. $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/ha_official_validator.py
 
 # SSH connectivity test
 test-ssh:
