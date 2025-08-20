@@ -2,6 +2,9 @@
 
 A comprehensive system for managing Home Assistant configurations with automated validation, testing, and deployment - all enhanced by Claude Code for natural language automation creation.
 
+[![](https://github.com/user-attachments/assets/e4bb0179-a649-42d6-98f1-d8c29d5e84a3)](https://youtu.be/70VUzSw15-4)
+Click to play
+
 ## 🌟 Features
 
 - **🤖 AI-Powered Automation Creation**: Use Claude Code to write automations in plain English
