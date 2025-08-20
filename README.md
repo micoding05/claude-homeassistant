@@ -68,6 +68,25 @@ make push  # Uploads changes back to your HA instance (with validation)
 
 This gives you a complete development environment while keeping the public repository free of personal data and secrets.
 
+## ⚙️ Prerequisites
+
+### Make Command
+
+This project uses `make` commands for configuration management. If you don't have `make` installed:
+
+**macOS:**
+```bash
+xcode-select --install  # Installs Command Line Tools including make
+```
+
+**Windows:**
+- **Option 1**: Use WSL (Windows Subsystem for Linux) - recommended
+- **Option 2**: Install via Chocolatey: `choco install make`
+- **Option 3**: Use Git Bash (includes make)
+- **Option 4**: Install MinGW-w64
+
+**Alternative**: If you can't install `make`, you can run the underlying commands directly by checking the `Makefile` for the actual command syntax.
+
 ## 📁 Project Structure
 
 ```
