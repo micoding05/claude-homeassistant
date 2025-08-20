@@ -20,7 +20,7 @@ This repository provides a complete framework for managing Home Assistant config
 
 ### Repository Structure
 - **Template Configs**: The `config/` folder contains sanitized example configurations (no secrets)
-- **Validation Tools**: The `tools/` folder has all validation scripts  
+- **Validation Tools**: The `tools/` folder has all validation scripts
 - **Management Commands**: The `Makefile` contains pull/push commands
 - **Development Setup**: `pyproject.toml` and other dev files for tooling
 
@@ -62,7 +62,7 @@ make push  # Uploads changes back to your HA instance (with validation)
 ### How It Works
 
 1. **Template Start**: You begin with example configs showing proper structure
-2. **Real Data**: First `make pull` overwrites templates with your actual HA setup  
+2. **Real Data**: First `make pull` overwrites templates with your actual HA setup
 3. **Local Development**: Edit real configs locally with validation safety
 4. **Safe Deployment**: `make push` validates before uploading to prevent broken configs
 

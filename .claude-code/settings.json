@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "enabled": true,
+    "posttooluse": [
+      ".claude-code/hooks/posttooluse-ha-validation.sh",
+      ".claude-code/hooks/posttooluse-python-quality.sh"
+    ],
+    "pretooluse": [
+      ".claude-code/hooks/pretooluse-ha-push-validation.sh"
+    ]
+  },
+  "project": {
+    "name": "Home Assistant Configuration",
+    "description": "Management and validation of Home Assistant configuration files",
+    "type": "home-automation"
+  },
+  "validation": {
+    "enabled": true,
+    "auto_run": true,
+    "block_invalid_push": true
+  },
+  "development": {
+    "python": {
+      "enabled": true,
+      "tools": {
+        "formatter": "black",
+        "linter": ["flake8", "pylint"],
+        "type_checker": "mypy",
+        "import_sorter": "isort",
+        "test_runner": "pytest"
+      },
+      "auto_format": true,
+      "auto_lint": true,
+      "line_length": 88
+    },
+    "pre_commit": {
+      "enabled": true,
+      "auto_install": true
+    }
+  }
+}

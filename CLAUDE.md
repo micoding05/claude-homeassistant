@@ -159,3 +159,5 @@ vacuum.office_roborock
 - When creating automations, always ask the user for input if there are multiple choices for sensors or devices
 - Use the entity explorer tools to discover available entities before writing automations
 - Follow the naming convention when suggesting entity names in automations
+
+- All python tools need to be run with  `source venv/bin/activate && python <tool_path>`

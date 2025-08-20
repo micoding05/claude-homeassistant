@@ -1,0 +1,47 @@
+extends: default
+
+rules:
+  # Home Assistant specific adjustments
+  line-length: disable
+
+  # Allow truthy values (common in HA config)
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+    check-keys: false
+
+  # Disable indentation check for sequences (HA uses different styles)
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Allow empty values (common in HA templates)
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: false
+
+  # Comments can have different spacing
+  comments:
+    min-spaces-from-content: 1
+
+  # Allow document start indicators
+  document-start: disable
+
+  # Allow multiple documents in one file
+  document-end: disable
+
+  # Brackets can be used in different ways
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: -1
+
+  # Braces can be used in different ways
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: -1
+
+ignore: |
+  secrets.yaml
+  secrets.yaml.example
+  .yamllint.yml
+  .pre-commit-config.yaml
