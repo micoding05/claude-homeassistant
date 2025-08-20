@@ -173,12 +173,21 @@ class ReferenceValidator:
                 # Common entity reference keys
                 if key in ["entity_id", "entity_ids", "entities"]:
                     if isinstance(value, str):
-                        # Skip blueprint inputs and other HA tags, and skip UUID format
-                        if not value.startswith("!") and not self.is_uuid_format(value):
+                        # Skip blueprint inputs, HA tags, UUID format, templates, and special keywords
+                        if (not value.startswith("!") and 
+                            not self.is_uuid_format(value) and
+                            not value.startswith("{{") and
+                            not value.endswith("}}") and
+                            value not in ["all", "none"]):
                             entities.add(value)
                     elif isinstance(value, list):
                         for entity in value:
-                            if isinstance(entity, str) and not entity.startswith("!") and not self.is_uuid_format(entity):
+                            if (isinstance(entity, str) and 
+                                not entity.startswith("!") and 
+                                not self.is_uuid_format(entity) and
+                                not entity.startswith("{{") and
+                                not entity.endswith("}}") and
+                                entity not in ["all", "none"]):
                                 entities.add(entity)
 
                 # Device-related keys
@@ -398,12 +407,7 @@ class ReferenceValidator:
         for pattern in ["*.yaml", "*.yml"]:
             yaml_files.extend(self.config_dir.glob(pattern))
 
-        # Also check blueprints
-        blueprints_dir = self.config_dir / "blueprints"
-        if blueprints_dir.exists():
-            for pattern in ["**/*.yaml", "**/*.yml"]:
-                yaml_files.extend(blueprints_dir.glob(pattern))
-
+        # Skip blueprints directory - these are templates with !input tags that are expected
         return yaml_files
 
     def validate_all(self) -> bool:
