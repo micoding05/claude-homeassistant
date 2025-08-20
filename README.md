@@ -28,8 +28,8 @@ This repository provides a complete framework for managing Home Assistant config
 
 #### 1. Clone Repository
 ```bash
-git clone <this-repo>
-cd home-assistant-claude-config
+git clone git@github.com:philippb/claude-homeassistant.git
+cd claude-homeassistant
 make setup  # Creates Python venv and installs dependencies
 ```
 
