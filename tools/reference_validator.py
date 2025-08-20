@@ -155,6 +155,13 @@ class ReferenceValidator:
 
         return self._areas
 
+    def is_uuid_format(self, value: str) -> bool:
+        """Check if a string matches UUID format (32 hex characters)."""
+        import re
+        # UUID format: 8-4-4-4-12 hex digits, but HA often stores without hyphens
+        uuid_pattern = r"^[a-f0-9]{32}$"
+        return bool(re.match(uuid_pattern, value))
+
     def extract_entity_references(self, data: Any, path: str = "") -> Set[str]:
         """Extract entity references from configuration data."""
         entities = set()
@@ -166,12 +173,12 @@ class ReferenceValidator:
                 # Common entity reference keys
                 if key in ["entity_id", "entity_ids", "entities"]:
                     if isinstance(value, str):
-                        # Skip blueprint inputs and other HA tags
-                        if not value.startswith("!"):
+                        # Skip blueprint inputs and other HA tags, and skip UUID format
+                        if not value.startswith("!") and not self.is_uuid_format(value):
                             entities.add(value)
                     elif isinstance(value, list):
                         for entity in value:
-                            if isinstance(entity, str) and not entity.startswith("!"):
+                            if isinstance(entity, str) and not entity.startswith("!") and not self.is_uuid_format(entity):
                                 entities.add(entity)
 
                 # Device-related keys
@@ -278,6 +285,33 @@ class ReferenceValidator:
 
         return areas
 
+    def extract_entity_registry_ids(self, data: Any) -> Set[str]:
+        """Extract entity registry UUID references from configuration data."""
+        entity_registry_ids = set()
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                # Look for entity_id fields that contain UUIDs (in device-based automations)
+                if key == "entity_id" and isinstance(value, str):
+                    if self.is_uuid_format(value):
+                        entity_registry_ids.add(value)
+                else:
+                    entity_registry_ids.update(self.extract_entity_registry_ids(value))
+        elif isinstance(data, list):
+            for item in data:
+                entity_registry_ids.update(self.extract_entity_registry_ids(item))
+
+        return entity_registry_ids
+
+    def get_entity_registry_id_mapping(self) -> Dict[str, str]:
+        """Get mapping from entity registry ID to entity_id."""
+        entities = self.load_entity_registry()
+        return {
+            entity_data["id"]: entity_data["entity_id"]
+            for entity_data in entities.values()
+            if "id" in entity_data
+        }
+
     def validate_file_references(self, file_path: Path) -> bool:
         """Validate all references in a single file."""
         if file_path.name == "secrets.yaml":
@@ -297,16 +331,22 @@ class ReferenceValidator:
         entity_refs = self.extract_entity_references(data)
         device_refs = self.extract_device_references(data)
         area_refs = self.extract_area_references(data)
+        entity_registry_ids = self.extract_entity_registry_ids(data)
 
         # Load registries
         entities = self.load_entity_registry()
         devices = self.load_device_registry()
         areas = self.load_area_registry()
+        entity_id_mapping = self.get_entity_registry_id_mapping()
 
         all_valid = True
 
-        # Validate entity references
+        # Validate entity references (normal entity_id format)
         for entity_id in entity_refs:
+            # Skip UUID-format entity IDs, they're handled separately
+            if self.is_uuid_format(entity_id):
+                continue
+                
             if entity_id not in entities:
                 # Check if it's a disabled entity
                 disabled_entities = {
@@ -322,6 +362,22 @@ class ReferenceValidator:
                 else:
                     self.errors.append(f"{file_path}: Unknown entity '{entity_id}'")
                     all_valid = False
+
+        # Validate entity registry ID references (UUID format)
+        for registry_id in entity_registry_ids:
+            if registry_id not in entity_id_mapping:
+                self.errors.append(f"{file_path}: Unknown entity registry ID '{registry_id}'")
+                all_valid = False
+            else:
+                # Check if the mapped entity is disabled
+                actual_entity_id = entity_id_mapping[registry_id]
+                if actual_entity_id in entities:
+                    entity_data = entities[actual_entity_id]
+                    if entity_data.get("disabled_by") is not None:
+                        self.warnings.append(
+                            f"{file_path}: Entity registry ID '{registry_id}' "
+                            f"references disabled entity '{actual_entity_id}'"
+                        )
 
         # Validate device references
         for device_id in device_refs:
