@@ -51,6 +51,13 @@ class TestReferenceValidatorUUID(unittest.TestCase):
                         "unique_id": "normal_sensor",
                         "disabled_by": None,
                     },
+                    {
+                        "entity_id": "sensor.complex",
+                        "id": "complexsensoridfortest12345678900",
+                        "platform": "test",
+                        "unique_id": "complex_sensor",
+                        "disabled_by": None,
+                    },
                 ]
             },
         }
@@ -78,6 +85,20 @@ class TestReferenceValidatorUUID(unittest.TestCase):
                 ]
             },
         }
+        
+        # Create mock area registry  
+        self.area_registry_data = {
+            "version": 1,
+            "minor_version": 1,
+            "data": {
+                "areas": [
+                    {
+                        "id": "living_room",
+                        "name": "Living Room"
+                    }
+                ]
+            }
+        }
 
         # Write registry files
         with open(self.storage_dir / "core.entity_registry", "w") as f:
@@ -85,6 +106,9 @@ class TestReferenceValidatorUUID(unittest.TestCase):
 
         with open(self.storage_dir / "core.device_registry", "w") as f:
             json.dump(self.device_registry_data, f)
+            
+        with open(self.storage_dir / "core.area_registry", "w") as f:
+            json.dump(self.area_registry_data, f)
 
         self.validator = ReferenceValidator(str(self.config_dir))
 
@@ -159,6 +183,7 @@ class TestReferenceValidatorUUID(unittest.TestCase):
             "88a52f17bf43cb276836f06ac5c07444": "binary_sensor.test_motion_battery",
             "11223344556677889900aabbccddeeff": "sensor.disabled_sensor",
             "aabbccddeeff00112233445566778899": "sensor.normal_sensor",
+            "complexsensoridfortest12345678900": "sensor.complex",
         }
 
         self.assertEqual(mapping, expected_mapping)
@@ -297,6 +322,116 @@ class TestReferenceValidatorUUID(unittest.TestCase):
         # Should only contain normal format entity IDs
         expected_refs = {"sensor.normal_entity", "binary_sensor.another_sensor"}
         self.assertEqual(entity_refs, expected_refs)
+
+    def test_is_template(self):
+        """Test template detection."""
+        # Valid template expressions
+        self.assertTrue(self.validator.is_template("{{ states('sensor.temperature') }}"))
+        self.assertTrue(self.validator.is_template("Temperature is {{ state_attr('sensor.temp', 'value') }}°C"))
+        self.assertTrue(self.validator.is_template("{{states('binary_sensor.motion')}}"))
+        self.assertTrue(self.validator.is_template("Value: {{ 25 + 5 }}"))
+        
+        # Invalid/non-template expressions
+        self.assertFalse(self.validator.is_template("sensor.temperature"))
+        self.assertFalse(self.validator.is_template("normal text"))
+        self.assertFalse(self.validator.is_template("{ single brace }"))
+        self.assertFalse(self.validator.is_template(""))
+
+    def test_should_skip_entity_validation(self):
+        """Test entity validation skip logic."""
+        # Should skip - HA tags
+        self.assertTrue(self.validator.should_skip_entity_validation("!input sensor_name"))
+        self.assertTrue(self.validator.should_skip_entity_validation("!secret api_key"))
+        self.assertTrue(self.validator.should_skip_entity_validation("!include entities.yaml"))
+        
+        # Should skip - UUID format
+        self.assertTrue(self.validator.should_skip_entity_validation("88a52f17bf43cb276836f06ac5c07444"))
+        
+        # Should skip - Templates
+        self.assertTrue(self.validator.should_skip_entity_validation("{{ states('sensor.temp') }}"))
+        self.assertTrue(self.validator.should_skip_entity_validation("Temperature {{ sensor.temp }}"))
+        
+        # Should skip - Special keywords
+        self.assertTrue(self.validator.should_skip_entity_validation("all"))
+        self.assertTrue(self.validator.should_skip_entity_validation("none"))
+        
+        # Should NOT skip - Normal entity IDs
+        self.assertFalse(self.validator.should_skip_entity_validation("sensor.temperature"))
+        self.assertFalse(self.validator.should_skip_entity_validation("binary_sensor.motion"))
+        self.assertFalse(self.validator.should_skip_entity_validation("light.living_room"))
+
+    def test_extract_entity_references_with_templates(self):
+        """Test entity reference extraction skips templates."""
+        config_data = {
+            "entity_id": "sensor.normal",  # Should be included
+            "entity_ids": [
+                "{{ states('sensor.template') }}",  # Should be skipped (template)
+                "binary_sensor.door",  # Should be included
+                "all",  # Should be skipped (special keyword)
+                "none"  # Should be skipped (special keyword)
+            ]
+        }
+        
+        entity_refs = self.validator.extract_entity_references(config_data)
+        expected_refs = {"sensor.normal", "binary_sensor.door"}
+        self.assertEqual(entity_refs, expected_refs)
+
+    def test_extract_entity_references_with_blueprint_inputs(self):
+        """Test entity reference extraction skips blueprint inputs."""
+        blueprint_data = {
+            "entity_id": "!input motion_sensor",  # Should be skipped
+            "entity_ids": [
+                "!input door_sensor",  # Should be skipped
+                "binary_sensor.actual_door",  # Should be included
+                "!secret api_entity"  # Should be skipped
+            ]
+        }
+        
+        entity_refs = self.validator.extract_entity_references(blueprint_data)
+        expected_refs = {"binary_sensor.actual_door"}
+        self.assertEqual(entity_refs, expected_refs)
+
+    def test_special_keywords_class_variable(self):
+        """Test that special keywords are defined as class variable."""
+        self.assertIn("all", ReferenceValidator.SPECIAL_KEYWORDS)
+        self.assertIn("none", ReferenceValidator.SPECIAL_KEYWORDS)
+        self.assertIsInstance(ReferenceValidator.SPECIAL_KEYWORDS, set)
+
+    def test_validate_file_with_mixed_entity_types(self):
+        """Test validation with templates, UUIDs, and normal entities mixed."""
+        automation_data = [{
+            "id": "complex_automation",
+            "alias": "Complex Mixed Automation",
+            "trigger": {
+                "platform": "template",
+                "value_template": "{{ states('sensor.complex') == 'on' }}"  # Template, should be ignored
+            },
+            "condition": [{
+                "condition": "state",
+                "entity_id": "88a52f17bf43cb276836f06ac5c07444",  # Valid UUID
+                "state": "on"
+            }],
+            "action": [{
+                "service": "light.turn_on",
+                "target": {
+                    "entity_id": ["all"]  # Special keyword, should be ignored
+                }
+            }, {
+                "service": "notify.send",
+                "data": {
+                    "message": "{{ now() }} - Motion detected"  # Template in data
+                }
+            }]
+        }]
+        
+        test_file = self.config_dir / "complex_test.yaml"
+        with open(test_file, "w") as f:
+            yaml.dump(automation_data, f)
+        
+        # Should validate successfully
+        result = self.validator.validate_file_references(test_file)
+        self.assertTrue(result)
+        self.assertEqual(len(self.validator.errors), 0)
 
 
 if __name__ == "__main__":
