@@ -34,7 +34,19 @@ help:
 # Pull configuration from Home Assistant
 pull:
 	@echo "$(GREEN)Pulling configuration from Home Assistant...$(NC)"
-	@rsync -avz --delete $(HA_HOST):$(HA_REMOTE_PATH) $(LOCAL_CONFIG_PATH)
+	@rsync -avz --delete \
+		--exclude='home-assistant_v2.db*' \
+		--exclude='*.log*' \
+		--exclude='custom_components/' \
+		--exclude='custom_icons/' \
+		--exclude='themes/' \
+		--exclude='.cloud/' \
+		--exclude='deps/' \
+		--exclude='tts/' \
+		--exclude='*.db-shm' \
+		--exclude='*.db-wal' \
+		--exclude='.uuid' \
+		$(HA_HOST):$(HA_REMOTE_PATH) $(LOCAL_CONFIG_PATH)
 	@echo "$(GREEN)Configuration pulled successfully!$(NC)"
 	@echo "$(YELLOW)Running validation to ensure integrity...$(NC)"
 	@$(MAKE) validate
