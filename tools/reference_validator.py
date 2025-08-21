@@ -80,6 +80,9 @@ HAYamlLoader.add_constructor("!secret", secret_constructor)
 class ReferenceValidator:
     """Validates entity and device references in Home Assistant config."""
 
+    # Special keywords that are not entity IDs
+    SPECIAL_KEYWORDS = {"all", "none"}
+
     def __init__(self, config_dir: str = "config"):
         """Initialize the ReferenceValidator."""
         self.config_dir = Path(config_dir)
@@ -162,6 +165,21 @@ class ReferenceValidator:
         uuid_pattern = r"^[a-f0-9]{32}$"
         return bool(re.match(uuid_pattern, value))
 
+    def is_template(self, value: str) -> bool:
+        """Check if value is a Jinja2 template expression."""
+        import re
+        # Match template expressions like {{ ... }}
+        return bool(re.search(r'\{\{.*?\}\}', value))
+
+    def should_skip_entity_validation(self, value: str) -> bool:
+        """Check if entity reference should be skipped during validation."""
+        return (
+            value.startswith("!") or  # HA tags like !input, !secret
+            self.is_uuid_format(value) or  # UUID format (device-based)
+            self.is_template(value) or  # Template expressions
+            value in self.SPECIAL_KEYWORDS  # Special keywords like "all", "none"
+        )
+
     def extract_entity_references(self, data: Any, path: str = "") -> Set[str]:
         """Extract entity references from configuration data."""
         entities = set()
@@ -173,21 +191,11 @@ class ReferenceValidator:
                 # Common entity reference keys
                 if key in ["entity_id", "entity_ids", "entities"]:
                     if isinstance(value, str):
-                        # Skip blueprint inputs, HA tags, UUID format, templates, and special keywords
-                        if (not value.startswith("!") and 
-                            not self.is_uuid_format(value) and
-                            not value.startswith("{{") and
-                            not value.endswith("}}") and
-                            value not in ["all", "none"]):
+                        if not self.should_skip_entity_validation(value):
                             entities.add(value)
                     elif isinstance(value, list):
                         for entity in value:
-                            if (isinstance(entity, str) and 
-                                not entity.startswith("!") and 
-                                not self.is_uuid_format(entity) and
-                                not entity.startswith("{{") and
-                                not entity.endswith("}}") and
-                                entity not in ["all", "none"]):
+                            if isinstance(entity, str) and not self.should_skip_entity_validation(entity):
                                 entities.add(entity)
 
                 # Device-related keys

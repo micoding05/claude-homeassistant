@@ -142,11 +142,13 @@ class YAMLValidator:
                 self.errors.append(f"{file_path}: Automations must be a list")
                 return False
 
+            all_valid = True
             for i, automation in enumerate(automations):
                 if not isinstance(automation, dict):
                     self.errors.append(
                         f"{file_path}: Automation {i} must be a dictionary"
                     )
+                    all_valid = False
                     continue
 
                 # Check required fields (both singular and plural forms are valid)
@@ -154,8 +156,10 @@ class YAMLValidator:
                 if "use_blueprint" not in automation:
                     if "trigger" not in automation and "triggers" not in automation:
                         self.errors.append(f"{file_path}: Automation {i} missing 'trigger' or 'triggers'")
+                        all_valid = False
                     if "action" not in automation and "actions" not in automation:
                         self.errors.append(f"{file_path}: Automation {i} missing 'action' or 'actions'")
+                        all_valid = False
 
                 # Check for alias (recommended)
                 if "alias" not in automation:
@@ -163,7 +167,7 @@ class YAMLValidator:
                         f"{file_path}: Automation {i} missing 'alias' " f"(recommended)"
                     )
 
-            return True
+            return all_valid
         except Exception as e:
             self.errors.append(
                 f"{file_path}: Failed to validate automations structure - {e}"
@@ -186,11 +190,13 @@ class YAMLValidator:
                 self.errors.append(f"{file_path}: Scripts must be a dictionary")
                 return False
 
+            all_valid = True
             for script_name, script_config in scripts.items():
                 if not isinstance(script_config, dict):
                     self.errors.append(
                         f"{file_path}: Script '{script_name}' must be a " f"dictionary"
                     )
+                    all_valid = False
                     continue
 
                 # Check required fields
@@ -199,8 +205,9 @@ class YAMLValidator:
                     self.errors.append(
                         f"{file_path}: Script '{script_name}' missing required " f"'sequence' or 'use_blueprint'"
                     )
+                    all_valid = False
 
-            return True
+            return all_valid
         except Exception as e:
             self.errors.append(
                 f"{file_path}: Failed to validate scripts structure - {e}"
