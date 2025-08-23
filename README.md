@@ -59,6 +59,8 @@ TOOLS_PATH=tools
 
 Set up SSH access to your Home Assistant instance.
 
+**Recommended**: Install the [Advanced SSH & Web Terminal](https://github.com/hassio-addons/addon-ssh) add-on for Home Assistant, which provides excellent SSH/SFTP access needed for the rsync operations in this project.
+
 #### 3. Pull Your Real Configuration
 ```bash
 make pull  # Downloads YOUR actual HA config, overwriting template files
