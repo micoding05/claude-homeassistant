@@ -1,0 +1,11 @@
+home-assistant_v2.db*
+*.log*
+custom_components/
+custom_icons/
+themes/
+.cloud/
+deps/
+tts/
+*.db-shm
+*.db-wal
+.uuid

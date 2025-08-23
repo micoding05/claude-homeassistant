@@ -47,11 +47,12 @@ repos:
         args: ["--rcfile=public/pyproject.toml"]
         additional_dependencies: [homeassistant, voluptuous, pyyaml]
 
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.35.1
+  - repo: local
     hooks:
-      - id: yamllint
-        args: [-c=public/.yamllint.yml]
+      - id: yamllint-claude-only
+        name: yamllint (Claude-generated files only)
+        entry: .claude-code/hooks/yamllint-claude-only.sh
+        language: script
         files: \.(yaml|yml)$
 
   - repo: https://github.com/codespell-project/codespell

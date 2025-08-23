@@ -34,19 +34,7 @@ help:
 # Pull configuration from Home Assistant
 pull:
 	@echo "$(GREEN)Pulling configuration from Home Assistant...$(NC)"
-	@rsync -avz --delete \
-		--exclude='home-assistant_v2.db*' \
-		--exclude='*.log*' \
-		--exclude='custom_components/' \
-		--exclude='custom_icons/' \
-		--exclude='themes/' \
-		--exclude='.cloud/' \
-		--exclude='deps/' \
-		--exclude='tts/' \
-		--exclude='*.db-shm' \
-		--exclude='*.db-wal' \
-		--exclude='.uuid' \
-		$(HA_HOST):$(HA_REMOTE_PATH) $(LOCAL_CONFIG_PATH)
+	@rsync -avz --delete --exclude-from=.rsync-excludes $(HA_HOST):$(HA_REMOTE_PATH) $(LOCAL_CONFIG_PATH)
 	@echo "$(GREEN)Configuration pulled successfully!$(NC)"
 	@echo "$(YELLOW)Running validation to ensure integrity...$(NC)"
 	@$(MAKE) validate
@@ -56,7 +44,7 @@ push:
 	@echo "$(GREEN)Validating configuration before push...$(NC)"
 	@$(MAKE) validate
 	@echo "$(GREEN)Validation passed! Pushing to Home Assistant...$(NC)"
-	@rsync -avz --delete $(LOCAL_CONFIG_PATH) $(HA_HOST):$(HA_REMOTE_PATH)
+	@rsync -avz --delete --exclude-from=.rsync-excludes $(LOCAL_CONFIG_PATH) $(HA_HOST):$(HA_REMOTE_PATH)
 	@echo "$(GREEN)Configuration pushed successfully!$(NC)"
 	@echo "$(YELLOW)Remember to restart Home Assistant if needed.$(NC)"
 
