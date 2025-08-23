@@ -34,10 +34,27 @@ make setup  # Creates Python venv and installs dependencies
 ```
 
 #### 2. Configure Connection
-Edit `Makefile` and update these variables:
-```makefile
-HA_HOST = your_homeassistant_host
-HA_REMOTE_PATH = /config/
+Copy the example environment file and configure your settings:
+```bash
+cp .env.example .env
+# Edit .env with your actual Home Assistant details
+```
+
+The `.env` file should contain:
+```bash
+# Home Assistant Configuration
+HA_TOKEN=your_home_assistant_token
+HA_URL=http://your_homeassistant_host:8123
+
+# SSH Configuration for rsync operations
+HA_HOST=your_homeassistant_host
+HA_REMOTE_PATH=/config/
+
+# Local Configuration (optional - defaults provided)
+LOCAL_CONFIG_PATH=config/
+BACKUP_DIR=backups
+VENV_PATH=venv
+TOOLS_PATH=tools
 ```
 
 Set up SSH access to your Home Assistant instance.
@@ -66,7 +83,7 @@ make push  # Uploads changes back to your HA instance (with validation)
 3. **Local Development**: Edit real configs locally with validation safety
 4. **Safe Deployment**: `make push` validates before uploading to prevent broken configs
 
-This gives you a complete development environment while keeping the public repository free of personal data and secrets.
+This gives you a complete development environment while only modifying your HA instance when completed.
 
 ## ⚙️ Prerequisites
 
@@ -90,12 +107,12 @@ xcode-select --install  # Installs Command Line Tools including make
 ## 📁 Project Structure
 
 ```
-├── config/                 # Home Assistant configuration files
+├── config/                 # Home Assistant configuration files, downloaded from HA via script
 │   ├── configuration.yaml
 │   ├── automations.yaml
 │   ├── scripts.yaml
 │   └── .storage/          # Entity registry (pulled from HA)
-├── tools/                 # Validation scripts
+├── tools/                 # Validation scripts for Claude
 │   ├── run_tests.py       # Main test suite runner
 │   ├── yaml_validator.py  # YAML syntax validation
 │   ├── reference_validator.py # Entity reference validation
@@ -104,6 +121,7 @@ xcode-select --install  # Installs Command Line Tools including make
 ├── .claude-code/          # Claude Code project settings
 │   ├── hooks/            # Automated validation hooks
 │   └── settings.json     # Project configuration
+├── .env.example          # Environment configuration template
 ├── venv/                 # Python virtual environment
 ├── Makefile              # Management commands
 └── CLAUDE.md             # Claude Code instructions
@@ -130,6 +148,7 @@ make entities ARGS='--full'            # Complete detailed output
 
 ### Individual Validators
 ```bash
+. venv/bin/activate
 python tools/yaml_validator.py         # YAML syntax only
 python tools/reference_validator.py    # Entity references only
 python tools/ha_official_validator.py  # Official HA validation
@@ -211,13 +230,13 @@ The entity explorer helps you understand what's available:
 
 ```bash
 # Find all motion sensors
-python tools/entity_explorer.py --search motion
+. venv/bin/activate && python tools/entity_explorer.py --search motion
 
 # Show all climate controls
-python tools/entity_explorer.py --domain climate
+. venv/bin/activate && python tools/entity_explorer.py --domain climate
 
 # Kitchen devices only
-python tools/entity_explorer.py --area kitchen
+. venv/bin/activate && python tools/entity_explorer.py --area kitchen
 ```
 
 ## 🔒 Security & Best Practices
@@ -231,8 +250,8 @@ python tools/entity_explorer.py --area kitchen
 ## 🐛 Troubleshooting
 
 ### Validation Errors
-1. Check YAML syntax first: `python tools/yaml_validator.py`
-2. Verify entity references: `python tools/reference_validator.py`
+1. Check YAML syntax first: `. venv/bin/activate && python tools/yaml_validator.py`
+2. Verify entity references: `. venv/bin/activate && python tools/reference_validator.py`
 3. Check HA logs if official validation fails
 
 ### SSH Connection Issues
@@ -242,17 +261,34 @@ python tools/entity_explorer.py --area kitchen
 
 ### Missing Dependencies
 ```bash
-source venv/bin/activate
+. venv/bin/activate
 pip install homeassistant voluptuous pyyaml jsonschema requests
 ```
 
 ## 🔧 Configuration
 
-### Makefile Variables
-```makefile
-HA_HOST = your_homeassistant_host        # SSH hostname for HA
-HA_REMOTE_PATH = /config/                # Remote config path
-LOCAL_CONFIG_PATH = config/              # Local config directory
+### Environment Variables
+Configure via `.env` file in project root (copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+Available variables:
+```bash
+# Home Assistant Configuration
+HA_TOKEN=your_home_assistant_token       # HA API token
+HA_URL=http://your_homeassistant_host:8123  # HA instance URL
+
+# SSH Configuration for rsync operations
+HA_HOST=your_homeassistant_host          # SSH hostname for HA
+HA_REMOTE_PATH=/config/                  # Remote config path
+
+# Local Configuration (optional - defaults provided)
+LOCAL_CONFIG_PATH=config/                # Local config directory
+BACKUP_DIR=backups                       # Backup directory
+VENV_PATH=venv                          # Python virtual environment path
+TOOLS_PATH=tools                        # Tools directory
 ```
 
 ### Claude Code Settings
