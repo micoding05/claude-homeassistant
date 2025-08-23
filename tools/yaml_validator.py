@@ -152,13 +152,19 @@ class YAMLValidator:
                     continue
 
                 # Check required fields (both singular and plural forms are valid)
-                # Blueprint automations use 'use_blueprint' instead of direct triggers/actions
+                # Blueprint automations use 'use_blueprint' instead of
+                # direct triggers/actions
                 if "use_blueprint" not in automation:
                     if "trigger" not in automation and "triggers" not in automation:
-                        self.errors.append(f"{file_path}: Automation {i} missing 'trigger' or 'triggers'")
+                        self.errors.append(
+                            f"{file_path}: Automation {i} missing 'trigger' "
+                            f"or 'triggers'"
+                        )
                         all_valid = False
                     if "action" not in automation and "actions" not in automation:
-                        self.errors.append(f"{file_path}: Automation {i} missing 'action' or 'actions'")
+                        self.errors.append(
+                            f"{file_path}: Automation {i} missing 'action' or 'actions'"
+                        )
                         all_valid = False
 
                 # Check for alias (recommended)
@@ -201,9 +207,13 @@ class YAMLValidator:
 
                 # Check required fields
                 # Blueprint scripts use 'use_blueprint' instead of direct sequence
-                if "use_blueprint" not in script_config and "sequence" not in script_config:
+                if (
+                    "use_blueprint" not in script_config
+                    and "sequence" not in script_config
+                ):
                     self.errors.append(
-                        f"{file_path}: Script '{script_name}' missing required " f"'sequence' or 'use_blueprint'"
+                        f"{file_path}: Script '{script_name}' missing required "
+                        f"'sequence' or 'use_blueprint'"
                     )
                     all_valid = False
 

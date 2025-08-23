@@ -44,7 +44,7 @@ repos:
     rev: v3.0.3
     hooks:
       - id: pylint
-        args: ["--rcfile=public/pyproject.toml"]
+        args: ["--rcfile=pyproject.toml"]
         additional_dependencies: [homeassistant, voluptuous, pyyaml]
 
   - repo: local
