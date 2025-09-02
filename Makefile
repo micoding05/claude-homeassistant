@@ -20,7 +20,7 @@ YELLOW = \033[1;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-.PHONY: help pull push validate backup clean setup test status entities reload format-yaml
+.PHONY: help pull push validate backup clean setup test status entities reload format-yaml check-env
 
 # Default target
 help:
@@ -37,10 +37,11 @@ help:
 	@echo "  $(YELLOW)entities$(NC) - Explore available entities (usage: make entities [ARGS='options'])"
 	@echo "  $(YELLOW)reload$(NC)   - Reload Home Assistant configuration (without pushing)"
 	@echo "  $(YELLOW)format-yaml$(NC) - Format YAML files (usage: make format-yaml [FILES='file1.yaml file2.yaml'])"
+	@echo "  $(YELLOW)check-env$(NC) - Validate environment configuration (.env file)"
 	@echo "  $(YELLOW)clean$(NC)    - Clean up temporary files and caches"
 
 # Pull configuration from Home Assistant
-pull:
+pull: check-env
 	@echo "$(GREEN)Pulling configuration from Home Assistant...$(NC)"
 	@rsync -avz --delete --exclude-from=.rsync-excludes $(HA_HOST):$(HA_REMOTE_PATH) $(LOCAL_CONFIG_PATH)
 	@echo "$(GREEN)Configuration pulled successfully!$(NC)"
@@ -48,7 +49,7 @@ pull:
 	@$(MAKE) validate
 
 # Push configuration to Home Assistant (with pre-validation)
-push:
+push: check-env
 	@echo "$(GREEN)Validating configuration before push...$(NC)"
 	@$(MAKE) validate
 	@echo "$(GREEN)Validation passed! Pushing to Home Assistant...$(NC)"
@@ -162,6 +163,17 @@ check-setup:
 	@if [ ! -f "$(TOOLS_PATH)/run_tests.py" ]; then \
 		echo "$(RED)Validation tools not found.$(NC)"; \
 		exit 1; \
+	fi
+
+# Check if required environment variables are configured
+check-env:
+	@if [ "$(HA_HOST)" = "your_homeassistant_host" ] || [ -z "$(HA_HOST)" ]; then \
+		echo "$(RED)Error: HA_HOST not configured. Please set it in your .env file.$(NC)"; \
+		echo "$(YELLOW)Example: HA_HOST=homeassistant.local$(NC)"; \
+		exit 1; \
+	fi
+	@if [ ! -f ".env" ]; then \
+		echo "$(YELLOW)Warning: .env file not found. Copy .env.example to .env and configure your settings.$(NC)"; \
 	fi
 
 # Development targets (not shown in help)
