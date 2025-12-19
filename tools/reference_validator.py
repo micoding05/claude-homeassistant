@@ -181,11 +181,10 @@ class ReferenceValidator:
     def should_skip_entity_validation(self, value: str) -> bool:
         """Check if entity reference should be skipped during validation."""
         return (
-            value.startswith("!")
-            or self.is_uuid_format(value)  # HA tags like !input, !secret
-            or self.is_template(value)  # UUID format (device-based)
-            or value  # Template expressions
-            in self.SPECIAL_KEYWORDS  # Special keywords like "all", "none"
+            value.startswith("!")  # HA tags like !input, !secret
+            or self.is_uuid_format(value)  # UUID format (device-based)
+            or self.is_template(value)  # Template expressions
+            or value in self.SPECIAL_KEYWORDS  # Special keywords like "all", "none"
         )
 
     def extract_entity_references(self, data: Any, path: str = "") -> Set[str]:

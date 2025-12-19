@@ -79,7 +79,7 @@ class TestValidatorImprovements(unittest.TestCase):
         self.assertEqual(len(self.yaml_validator.errors), 0)
 
     def test_singular_triggers_actions_validation(self):
-        """Test that automations with singular triggers/actions still pass."""
+        """Test automations with singular triggers/actions still pass."""
         automation_with_singulars = [
             {
                 "id": "singular_test",
