@@ -2,6 +2,10 @@
 
 This repository manages Home Assistant configuration files with automated validation, testing, and deployment.
 
+## Before Making Changes
+
+**Always consult the latest Home Assistant documentation** at https://www.home-assistant.io/docs/ before suggesting configurations, automations, or integrations. HA updates frequently and syntax/features change between versions.
+
 ## Project Structure
 
 - `config/` - Contains all Home Assistant configuration files (synced from HA instance)
@@ -12,6 +16,58 @@ This repository manages Home Assistant configuration files with automated valida
 - `.claude-code/` - Project-specific Claude Code settings and hooks
   - `hooks/` - Validation hooks that run automatically
   - `settings.json` - Project configuration
+
+## Rsync Architecture
+
+This project uses **two separate exclude files** for different sync operations:
+
+| File | Used By | Purpose |
+|------|---------|---------|
+| `.rsync-excludes-pull` | `make pull` | Less restrictive |
+| `.rsync-excludes-push` | `make push` | More restrictive |
+
+**Why separate files?**
+- `make pull` downloads most files including `.storage/` (excluding sensitive auth files) for local reference
+- `make push` writes never overwrites HA's runtime state (`.storage/`)
+
+## What This Repo Can and Cannot Manage
+
+### SAFE TO MANAGE (YAML files)
+- `automations.yaml` - Automation definitions
+- `scenes.yaml` - Scene definitions
+- `scripts.yaml` - Script definitions
+- `configuration.yaml` - Main configuration
+- `secrets.yaml` - Secret values
+
+### NEVER MODIFY LOCALLY (Runtime State)
+These files in `.storage/` are managed by Home Assistant at runtime. Local modifications will be **overwritten** by HA on restart or ignored entirely.
+
+### Entity/Device Changes (Manual Only)
+
+Do not change entities or devices programmatically from this repo. If changes are
+needed, make them manually in the Home Assistant UI:
+- Settings → Devices & Services → Entities → Edit
+
+### Reloading After YAML Changes
+- Automations: `POST /api/services/automation/reload`
+- Scenes: `POST /api/services/scene/reload`
+- Scripts: `POST /api/services/script/reload`
+
+## Workflow Rules
+
+### Before Making Changes
+1. Run `make pull` to ensure local files are current
+2. Identify if the change affects YAML files or `.storage/` files
+3. YAML files → edit locally, then `make push`
+4. `.storage/` files → use the HA UI only (manual changes)
+
+### Before Running `make push`
+1. Validation runs automatically - do not push if validation fails
+2. Only YAML configuration files will be synced (`.storage/` is protected)
+
+### After `make push`
+1. Reload the relevant HA components (automations, scenes, scripts)
+2. Verify changes took effect in HA
 
 ## Available Commands
 
@@ -90,6 +146,7 @@ The system tracks entities across these domains:
 - **Secrets are skipped** during validation for security
 - **SSH access required** for pull/push operations
 - **Python venv required** for validation tools
+- All python tools need to be run with `source venv/bin/activate && python <tool_path>`
 
 ## Troubleshooting
 
@@ -159,5 +216,3 @@ vacuum.office_roborock
 - When creating automations, always ask the user for input if there are multiple choices for sensors or devices
 - Use the entity explorer tools to discover available entities before writing automations
 - Follow the naming convention when suggesting entity names in automations
-
-- All python tools need to be run with  `source venv/bin/activate && python <tool_path>`
