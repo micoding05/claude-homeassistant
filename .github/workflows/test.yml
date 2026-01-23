@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rsync-filter-tests:
+    name: Rsync Filter Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify rsync is available
+        run: rsync --version
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov
+
+      - name: Run rsync filter tests
+        run: python -m pytest tests/test_rsync_filter.py -o addopts=
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linters
+        run: pip install flake8 black isort
+
+      - name: Check formatting with black
+        run: black --check tools/
+
+      - name: Check imports with isort
+        run: isort --check-only tools/
+
+      - name: Lint with flake8
+        run: flake8 tools/ --max-line-length=100
