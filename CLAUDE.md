@@ -117,7 +117,7 @@ This project includes comprehensive validation to prevent invalid configurations
 - **User**: Configure SSH access as needed
 - **SSH Key**: Configure SSH key authentication
 - **Config Path**: /config/ (standard HA path)
-- **Version**: Compatible with Home Assistant Core 2024.x+
+- **Version**: Compatible with Home Assistant Core 2026.3.4+
 
 ## Entity Registry
 
