@@ -47,6 +47,31 @@ def load_area_registry(config_path: Path) -> Dict[str, str]:
     return area_names
 
 
+def load_device_registry(config_path: Path) -> Dict[str, Optional[str]]:
+    """Load device area assignments from device registry.
+    
+    Returns a dict mapping device_id -> area_id (or None if not assigned).
+    This is necessary because in recent HA versions, area assignments are
+    stored at the device level, not the entity level.
+    """
+    device_path = config_path / ".storage" / "core.device_registry"
+    device_areas = {}
+
+    if device_path.exists():
+        try:
+            with open(device_path, "r") as f:
+                device_data = json.load(f)
+                for device in device_data.get("data", {}).get("devices", []):
+                    device_id = device.get("id")
+                    area_id = device.get("area_id")
+                    if device_id:
+                        device_areas[device_id] = area_id
+        except Exception as e:
+            print(f"Warning: Could not load device registry: {e}")
+
+    return device_areas
+
+
 def get_entity_display_name(entity: Dict) -> str:
     """Get the best display name for an entity."""
     if entity.get("name"):
@@ -58,8 +83,18 @@ def get_entity_display_name(entity: Dict) -> str:
         return entity["entity_id"].split(".")[-1].replace("_", " ").title()
 
 
-def categorize_entities(entities: List[Dict], area_names: Dict[str, str]) -> Dict:
-    """Categorize entities by domain and area."""
+def categorize_entities(
+    entities: List[Dict],
+    area_names: Dict[str, str],
+    device_areas: Dict[str, Optional[str]],
+) -> Dict:
+    """Categorize entities by domain and area.
+    
+    Area assignment logic:
+    1. Check entity's area_id field (direct assignment)
+    2. If null, check the entity's device_id and lookup device's area_id
+    3. If neither exist, mark as "No Area"
+    """
     by_domain = defaultdict(list)
     by_area = defaultdict(list)
     automation_relevant = defaultdict(list)
@@ -92,7 +127,15 @@ def categorize_entities(entities: List[Dict], area_names: Dict[str, str]) -> Dic
         entity_id = entity["entity_id"]
         domain = entity_id.split(".")[0]
         display_name = get_entity_display_name(entity)
+        
+        # Get area_id: first from entity, otherwise from device
         area_id = entity.get("area_id")
+        if not area_id:
+            # Try to get area_id from the device this entity belongs to
+            device_id = entity.get("device_id")
+            if device_id and device_id in device_areas:
+                area_id = device_areas[device_id]
+        
         area_name = area_names.get(area_id, "No Area") if area_id else "No Area"
         device_class = entity.get("original_device_class") or entity.get("device_class")
 
@@ -296,6 +339,7 @@ def main():
         return 1
 
     area_names = load_area_registry(config_path)
+    device_areas = load_device_registry(config_path)
     entities = registry_data.get("data", {}).get("entities", [])
 
     if not entities:
@@ -303,7 +347,7 @@ def main():
         return 1
 
     # Categorize entities
-    categorized = categorize_entities(entities, area_names)
+    categorized = categorize_entities(entities, area_names, device_areas)
 
     # Show output based on arguments
     if args.search:
