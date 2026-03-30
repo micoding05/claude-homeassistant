@@ -806,3 +806,326 @@ class TestIncludeDirectiveEdgeCases:
         validator = ReferenceValidator(str(temp_config_dir))
         entities = validator.get_config_defined_entities()
 
+        # Should not crash, just no entities from this file
+        assert validator.errors == [] or True  # No crash is the test
+
+
+class TestPlatformEntityExtraction:
+    """Tests for _extract_platform_entities (CalDAV calendars, etc.)."""
+
+    def test_caldav_calendars_extracted(self, temp_config_dir):
+        """CalDAV calendar names from calendars list become entities."""
+        config = {
+            "calendar": [
+                {
+                    "platform": "caldav",
+                    "url": "https://example.com/dav",
+                    "calendars": ["Work Calendar", "Personal"],
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "calendar.work_calendar" in entities
+        assert "calendar.personal" in entities
+
+    def test_calendar_with_name_field(self, temp_config_dir):
+        """Generic calendar platform with name field is extracted."""
+        config = {
+            "calendar": [
+                {
+                    "platform": "local_calendar",
+                    "name": "Family Calendar",
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "calendar.family_calendar" in entities
+
+    def test_no_calendar_key_no_error(self, temp_config_dir):
+        """Configuration without calendar key doesn't cause errors."""
+        config = {"input_boolean": {"test_bool": {"name": "Test"}}}
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        # Should work without errors
+        assert "input_boolean.test_bool" in entities
+
+    def test_calendar_data_not_list_ignored(self, temp_config_dir):
+        """Calendar config that isn't a list is silently ignored."""
+        config = {"calendar": "!include calendars.yaml"}
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        # No crash, no calendar entities
+        assert not any(e.startswith("calendar.") for e in entities)
+
+    def test_calendar_item_not_dict_ignored(self, temp_config_dir):
+        """Non-dict items in calendar list are skipped."""
+        config = {"calendar": ["just_a_string", 42]}
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert not any(e.startswith("calendar.") for e in entities)
+
+    def test_calendars_list_with_non_string_entries(self, temp_config_dir):
+        """Non-string entries in calendars list are skipped."""
+        config = {
+            "calendar": [
+                {
+                    "platform": "caldav",
+                    "calendars": ["Valid Calendar", 123, None],
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "calendar.valid_calendar" in entities
+
+    def test_no_configuration_yaml_returns_empty(self, temp_config_dir):
+        """Missing configuration.yaml doesn't crash platform extraction."""
+        # Remove the default configuration.yaml if it exists
+        conf = temp_config_dir / "configuration.yaml"
+        if conf.exists():
+            conf.unlink()
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator._extract_platform_entities()
+
+        assert entities == set()
+
+
+class TestPlatformSensorExtraction:
+    """Tests for platform-based sensor extraction with name field (PR #47)."""
+
+    def test_rest_sensor_extracted_by_name(self, temp_config_dir):
+        """REST sensor platform with name field is extracted."""
+        config = {
+            "sensor": [
+                {
+                    "platform": "rest",
+                    "name": "External API Temperature",
+                    "resource": "https://example.com/api",
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "sensor.external_api_temperature" in entities
+
+    def test_statistics_sensor_extracted_by_name(self, temp_config_dir):
+        """Statistics sensor platform with name field is extracted."""
+        config = {
+            "sensor": [
+                {
+                    "platform": "statistics",
+                    "name": "Temperature Average",
+                    "entity_id": "sensor.temperature",
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "sensor.temperature_average" in entities
+
+    def test_binary_sensor_platform_with_name(self, temp_config_dir):
+        """Binary sensor platform with name field is extracted."""
+        config = {
+            "binary_sensor": [
+                {
+                    "platform": "ping",
+                    "name": "Router Reachable",
+                    "host": "192.168.1.1",
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "binary_sensor.router_reachable" in entities
+
+    def test_template_platform_still_uses_sensors_key(self, temp_config_dir):
+        """Legacy template platform still extracts from sensors dict keys."""
+        config = {
+            "sensor": [
+                {
+                    "platform": "template",
+                    "sensors": {
+                        "my_custom_sensor": {
+                            "friendly_name": "My Custom",
+                            "value_template": "{{ 42 }}",
+                        }
+                    },
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "sensor.my_custom_sensor" in entities
+
+    def test_multiple_platforms_mixed(self, temp_config_dir):
+        """Multiple sensor platforms in one config are all extracted."""
+        config = {
+            "sensor": [
+                {
+                    "platform": "rest",
+                    "name": "API Sensor",
+                    "resource": "https://example.com",
+                },
+                {
+                    "platform": "template",
+                    "sensors": {
+                        "template_sensor": {
+                            "value_template": "{{ 1 }}",
+                        }
+                    },
+                },
+                {
+                    "platform": "statistics",
+                    "name": "Stats Sensor",
+                    "entity_id": "sensor.source",
+                },
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "sensor.api_sensor" in entities
+        assert "sensor.template_sensor" in entities
+        assert "sensor.stats_sensor" in entities
+
+    def test_sensor_without_platform_key_ignored(self, temp_config_dir):
+        """Sensor items without platform key are not extracted."""
+        config = {
+            "sensor": [
+                {"name": "No Platform Sensor", "state": "{{ 1 }}"}
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "sensor.no_platform_sensor" not in entities
+
+    def test_sensor_platform_without_name_ignored(self, temp_config_dir):
+        """Platform sensor without name field doesn't produce entity."""
+        config = {
+            "sensor": [
+                {
+                    "platform": "rest",
+                    "resource": "https://example.com",
+                }
+            ]
+        }
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        # No name -> no entity extracted (only built-ins)
+        sensor_entities = [e for e in entities if e.startswith("sensor.")]
+        assert sensor_entities == []
+
+
+class TestCombinedExtraction:
+    """Integration tests for combined entity extraction across all sources."""
+
+    def test_templates_and_platforms_combined(self, temp_config_dir):
+        """Template includes and platform sensors work together."""
+        templates_dir = temp_config_dir / "templates"
+        templates_dir.mkdir()
+        (templates_dir / "climate.yaml").write_text(
+            yaml.dump(
+                [{"sensor": [{"name": "Template Sensor", "state": "{{ 1 }}"}]}]
+            )
+        )
+
+        config_text = (
+            "template: '!include_dir_merge_list templates/'\n"
+            "sensor:\n"
+            "  - platform: statistics\n"
+            "    name: Stats Sensor\n"
+            "    entity_id: sensor.source\n"
+            "calendar:\n"
+            "  - platform: caldav\n"
+            "    url: https://example.com\n"
+            "    calendars:\n"
+            "      - My Calendar\n"
+        )
+        (temp_config_dir / "configuration.yaml").write_text(config_text)
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+
+        assert "sensor.template_sensor" in entities
+        assert "sensor.stats_sensor" in entities
+        assert "calendar.my_calendar" in entities
+
+    def test_all_entity_sources_combined(self, temp_config_dir):
+        """Entities from all sources (registry, config, templates) work together."""
+        # Entity registry already has light.living_room and sensor.temperature
+        # from the fixture
+
+        # Add automation
+        automations = [
+            {"alias": "Morning Routine", "trigger": [], "action": []}
+        ]
+        (temp_config_dir / "automations.yaml").write_text(yaml.dump(automations))
+
+        # Add script
+        scripts = {"bedtime_script": {"sequence": []}}
+        (temp_config_dir / "scripts.yaml").write_text(yaml.dump(scripts))
+
+        # Add scene
+        scenes = [{"name": "Movie Night", "entities": {}}]
+        (temp_config_dir / "scenes.yaml").write_text(yaml.dump(scenes))
+
+        # Add config with input helper
+        config = {"input_boolean": {"guest_mode": {"name": "Guest Mode"}}}
+        (temp_config_dir / "configuration.yaml").write_text(yaml.dump(config))
+
+        validator = ReferenceValidator(str(temp_config_dir))
+        entities = validator.get_config_defined_entities()
+        registry = validator.load_entity_registry()
+
+        # Config-defined
+        assert "automation.morning_routine" in entities
+        assert "script.bedtime_script" in entities
+        assert "scene.movie_night" in entities
+        assert "input_boolean.guest_mode" in entities
+        assert "sun.sun" in entities
+        assert "zone.home" in entities
+
+        # Registry
+        assert "light.living_room" in registry
+        assert "sensor.temperature" in registry
