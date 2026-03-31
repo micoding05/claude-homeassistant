@@ -10,6 +10,7 @@ config/.uuid
 config/.HA_VERSION
 config/blueprints/
 config/zigbee2mqtt/
+config/
 
 # Python
 venv/
