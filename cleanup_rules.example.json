@@ -1,0 +1,50 @@
+{
+  "renames": [
+    {
+      "old_id": "light.old_entity_name",
+      "new_id": "light.home_room_device",
+      "reason": "naming convention"
+    },
+    {
+      "old_id": "sensor.vendor_model_abc123_power",
+      "new_id": "sensor.home_room_device_power",
+      "reason": "naming convention"
+    }
+  ],
+  "disable": {
+    "device_ids": [
+      {
+        "device_id": "hex_device_id_from_registry",
+        "reason": "duplicate: device controlled via another integration"
+      }
+    ],
+    "by_model": [
+      {
+        "model": "Tracked device",
+        "manufacturer": "Router Vendor",
+        "keep_entities": [
+          "device_tracker.my_phone",
+          "device_tracker.family_phone"
+        ],
+        "reason": "low value / noise"
+      }
+    ]
+  },
+  "areas": {
+    "create": [
+      {
+        "area_id": "network",
+        "name": "Network",
+        "reason": "separate infrastructure from physical rooms"
+      }
+    ],
+    "device_moves": [
+      {
+        "device_id": "hex_device_id_from_registry",
+        "device_name": "Router",
+        "new_area": "network",
+        "reason": "infrastructure device, not room-specific"
+      }
+    ]
+  }
+}

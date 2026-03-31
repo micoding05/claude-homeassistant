@@ -42,11 +42,27 @@ This project uses **two separate exclude files** for different sync operations:
 ### NEVER MODIFY LOCALLY (Runtime State)
 These files in `.storage/` are managed by Home Assistant at runtime. Local modifications will be **overwritten** by HA on restart or ignored entirely.
 
-### Entity/Device Changes (Manual Only)
+### Entity/Device Changes (WebSocket API)
 
-Do not change entities or devices programmatically from this repo. If changes are
-needed, make them manually in the Home Assistant UI:
-- Settings → Devices & Services → Entities → Edit
+Entity renames, disabling, area creation, and device area assignments **require the WebSocket API**. The HA REST API does NOT expose registry mutation endpoints (they return 404).
+
+Use `tools/ha_registry_manager.py` for batch operations, or connect directly:
+```
+ws://<HA_URL>/api/websocket
+```
+
+Key WebSocket commands:
+| Command | Purpose |
+|---------|--------|
+| `config/entity_registry/list` | List all entities |
+| `config/entity_registry/update` | Rename (`new_entity_id`) or disable (`disabled_by: "user"`) |
+| `config/device_registry/list` | List all devices |
+| `config/device_registry/update` | Move device to area (`area_id`) |
+| `config/area_registry/list` | List all areas |
+| `config/area_registry/create` | Create new area (`name`) |
+| `config/area_registry/delete` | Delete area (`area_id`) |
+
+Authentication: send `{"type": "auth", "access_token": "<token>"}` after connecting.
 
 ### Reloading After YAML Changes
 - Automations: `POST /api/services/automation/reload`
@@ -91,6 +107,14 @@ needed, make them manually in the Home Assistant UI:
   - `--area AREA` - Show entities from specific area
   - `--full` - Show complete detailed output
 
+### Registry Manager
+- `python tools/ha_registry_manager.py --config config --rules cleanup_rules.json --plan` - Show cleanup plan
+- `python tools/ha_registry_manager.py --config config --rules cleanup_rules.json --apply` - Apply via WebSocket API
+  - `--skip-confirm` - Skip interactive confirmation
+  - `--renames-only` / `--disable-only` / `--areas-only` - Filter operations
+  - Requires `websockets` package and `HA_TOKEN`/`HA_URL` in `.env`
+  - Rules are defined in a JSON file (see `cleanup_rules.example.json` for format)
+
 ## Validation System
 
 This project includes comprehensive validation to prevent invalid configurations:
@@ -127,6 +151,22 @@ The system tracks entities across these domains:
 - number, person, scene, select, sensor, siren, switch
 - time, tts, update, vacuum, water_heater, weather, zone
 
+### Area Resolution
+
+**Important**: Most entities have `area_id: null` in `core.entity_registry`. Area assignments are stored at the **device level** in `core.device_registry`. To resolve an entity's area:
+1. Look up the entity's `device_id` in the entity registry
+2. Find that device in the device registry
+3. Read the device's `area_id`
+
+The `entity_explorer.py` tool handles this automatically.
+
+### Areas
+
+Areas are defined in `core.area_registry` inside `.storage/`. Use the entity explorer to list current areas:
+```
+python tools/entity_explorer.py --config config
+```
+
 ## Development Workflow
 
 1. **Pull Latest**: `make pull` to sync from HA
@@ -153,6 +193,7 @@ The system tracks entities across these domains:
 - **SSH access required** for pull/push operations
 - **Python venv required** for validation tools
 - All python tools need to be run with `source venv/bin/activate && python <tool_path>`
+- **REST API vs WebSocket API**: The REST API (`/api/services/`, `/api/states/`) works for state queries and service calls. Registry mutations (entity rename, disable, area/device management) **only work via WebSocket**.
 
 ## Troubleshooting
 
@@ -194,16 +235,14 @@ This Home Assistant setup uses a **standardized entity naming convention** for m
 
 ### **Examples:**
 ```
-binary_sensor.home_basement_motion_battery
-binary_sensor.home_basement_motion_tamper
-media_player.home_kitchen_sonos
-media_player.office_main_bedroom_sonos
-climate.home_living_room_heatpump
-climate.office_living_room_thermostat
-lock.home_front_door_august
-sensor.office_driveway_camera_battery
-vacuum.home_roborock
-vacuum.office_roborock
+domain.location_room_device
+domain.location_room_device_sensor
+
+binary_sensor.home_kitchen_motion_battery
+media_player.home_living_room_sonos
+climate.home_bedroom_thermostat
+sensor.home_laundry_washer_status
+light.home_kitchen_led
 ```
 
 ### **Benefits:**
@@ -213,12 +252,12 @@ vacuum.office_roborock
 - **Scalable** - supports additional locations or rooms
 
 ### **Implementation:**
-- All location-based entities follow this convention
-- Legacy entities have been systematically renamed
+- All location-based entities should follow this convention
+- Use `tools/ha_registry_manager.py` with a rules file to batch-rename entities to match the convention
 - New entities should follow this pattern
-- Vendor prefixes (aquanta_, august_, etc.) are replaced with descriptive device names
+- Vendor prefixes and hardware identifiers should be replaced with descriptive device names
 
-### **Claude Code Integration:**
+### **Agent Integration:**
 - When creating automations, always ask the user for input if there are multiple choices for sensors or devices
 - Use the entity explorer tools to discover available entities before writing automations
 - Follow the naming convention when suggesting entity names in automations
