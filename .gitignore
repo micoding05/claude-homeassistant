@@ -1,7 +1,8 @@
 # Home Assistant Configuration Management - .gitignore
 
 # Secrets and sensitive data
-config/secrets.yaml
+config/*.yaml
+!config/*.example
 config/.storage/
 config/home-assistant.log*
 config/OZW_Log.txt
