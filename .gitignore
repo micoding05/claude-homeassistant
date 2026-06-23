@@ -92,6 +92,10 @@ config/.cloud/
 config/.ha_run.lock
 config/blueprints/
 config/zigbee2mqtt/
+config/.ha_tracking/
+
+# Claude Code configuration and workspace data
+.claude/
 
 # Custom components (managed by HACS)
 config/custom_components/
