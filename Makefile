@@ -11,7 +11,7 @@ HA_HOST ?= your_homeassistant_host
 HA_REMOTE_PATH ?= /config/
 LOCAL_CONFIG_PATH ?= config/
 BACKUP_DIR ?= backups
-VENV_PATH ?= venv
+VENV_PATH ?= .venv
 TOOLS_PATH ?= tools
 
 # Colors for output

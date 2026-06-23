@@ -18,7 +18,8 @@ class ValidationTestRunner:
         """Initialize the test runner."""
         self.config_dir = Path(config_dir).resolve()
         self.tools_dir = Path(__file__).parent
-        self.venv_dir = self.tools_dir.parent / "venv"
+        self.venv_dir = self.tools_dir.parent / ".venv"
+        self.legacy_venv_dir = self.tools_dir.parent / "venv"
         self.results: Dict[str, Dict[str, Any]] = {}
 
     def get_python_executable(self) -> str:
@@ -26,6 +27,11 @@ class ValidationTestRunner:
         venv_python = self.venv_dir / "bin" / "python"
         if venv_python.exists():
             return str(venv_python)
+
+        legacy_venv_python = self.legacy_venv_dir / "bin" / "python"
+        if legacy_venv_python.exists():
+            return str(legacy_venv_python)
+
         return sys.executable
 
     def run_validator(
@@ -151,13 +157,13 @@ class ValidationTestRunner:
         print(f"Passed: {passed_tests}")
         print(f"Failed: {failed_tests}")
 
-        if failed_tests == 0:
-            print("\n🎉 All tests passed! Your Home Assistant configuration is valid.")
-        else:
+        if failed_tests > 0:
             print(
                 f"\n⚠️  {failed_tests} test(s) failed. "
                 "Please review the errors above."
             )
+        else:
+            print("\n🎉 All tests passed! Your Home Assistant configuration is valid.")
 
         print()
 

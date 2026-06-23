@@ -47,8 +47,8 @@ class HAOfficialValidator:
             # Parse the output
             self.parse_check_config_output(result.stdout, result.stderr)
 
-            # Return success if exit code is 0
-            return result.returncode == 0
+            # Return success only if exit code is 0 AND no errors were found
+            return result.returncode == 0 and len(self.errors) == 0
 
         except subprocess.TimeoutExpired:
             self.errors.append("Home Assistant configuration check timed out")

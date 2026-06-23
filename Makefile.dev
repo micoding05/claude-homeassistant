@@ -7,7 +7,7 @@ include Makefile
 # Development-specific variables
 PYTHON = python3.12
 PIP = pip
-VENV_ACTIVATE = source venv/bin/activate
+VENV_ACTIVATE = . $(VENV_PATH)/bin/activate
 TEST_DIR = tests
 COVERAGE_DIR = htmlcov
 
@@ -56,7 +56,7 @@ dev-setup: dev-install dev-pre-commit
 # Install development dependencies
 dev-install:
 	@echo "$(GREEN)Installing development dependencies...$(NC)"
-	@if [ ! -L "venv" ]; then echo "$(RED)Error: venv symlink not found$(NC)"; exit 1; fi
+	@if [ ! -d "$(VENV_PATH)" ]; then echo "$(RED)Error: virtual environment not found at $(VENV_PATH)$(NC)"; exit 1; fi
 	@$(VENV_ACTIVATE) && $(PIP) install --upgrade pip
 	@$(VENV_ACTIVATE) && $(PIP) install -r requirements-dev.txt
 	@echo "$(GREEN)Development dependencies installed!$(NC)"
@@ -72,7 +72,7 @@ dev-format:
 dev-lint:
 	@echo "$(GREEN)Running linters...$(NC)"
 	@echo "$(CYAN)Running flake8...$(NC)"
-	@$(VENV_ACTIVATE) && flake8 tools/
+	@$(VENV_ACTIVATE) && flake8 tools/ --max-line-length=88
 	@echo "$(CYAN)Running pylint...$(NC)"
 	@$(VENV_ACTIVATE) && pylint tools/
 	@echo "$(GREEN)Linting complete!$(NC)"
@@ -90,7 +90,7 @@ dev-check-all: dev-format dev-lint dev-type-check
 # Run tests
 dev-test:
 	@echo "$(GREEN)Running pytest tests...$(NC)"
-	@$(VENV_ACTIVATE) && pytest $(TEST_DIR) -v
+	@$(VENV_ACTIVATE) && pytest $(TEST_DIR) -v --no-cov
 	@echo "$(GREEN)Tests complete!$(NC)"
 
 # Run tests with coverage
@@ -102,7 +102,7 @@ dev-test-coverage:
 # Run tests with verbose output
 dev-test-verbose:
 	@echo "$(GREEN)Running verbose tests...$(NC)"
-	@$(VENV_ACTIVATE) && pytest $(TEST_DIR) -v -s
+	@$(VENV_ACTIVATE) && pytest $(TEST_DIR) -v -s --no-cov
 	@echo "$(GREEN)Verbose tests complete!$(NC)"
 
 # Install and run pre-commit

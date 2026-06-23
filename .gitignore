@@ -89,6 +89,9 @@ config/.shopping_list.json
 config/.google.token
 config/nest/
 config/.cloud/
+config/.ha_run.lock
+config/blueprints/
+config/zigbee2mqtt/
 
 # Custom components (managed by HACS)
 config/custom_components/
