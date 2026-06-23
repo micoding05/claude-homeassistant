@@ -20,7 +20,7 @@ YELLOW = \033[1;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-.PHONY: help pull push validate backup clean setup test status entities reload format-yaml check-env track discover
+.PHONY: help pull push validate backup clean setup test status entities reload format-yaml check-env track discover duplicates
 
 # Default target
 help:
@@ -38,6 +38,7 @@ help:
 	@echo "  $(YELLOW)reload$(NC)   - Reload Home Assistant configuration (without pushing)"
 	@echo "  $(YELLOW)track$(NC)    - Track HA environment (version, integrations, devices, changes)"
 	@echo "  $(YELLOW)discover$(NC) - Discover newly added devices (created in last 30 days)"
+	@echo "  $(YELLOW)duplicates$(NC) - Audit suspicious duplicate integration entries"
 	@echo "  $(YELLOW)format-yaml$(NC) - Format YAML files (usage: make format-yaml [FILES='file1.yaml file2.yaml'])"
 	@echo "  $(YELLOW)check-env$(NC) - Validate environment configuration (.env file)"
 	@echo "  $(YELLOW)clean$(NC)    - Clean up temporary files and caches"
@@ -235,3 +236,8 @@ track:
 discover:
 	@echo "$(GREEN)Discovering new devices (last 30 days)...$(NC)"
 	@. $(VENV_PATH)/bin/activate && python3 $(TOOLS_PATH)/ha_discovery.py
+
+# Audit suspicious duplicate config entries
+duplicates:
+	@echo "$(GREEN)Auditing suspicious duplicate config entries...$(NC)"
+	@. $(VENV_PATH)/bin/activate && python3 $(TOOLS_PATH)/ha_duplicates.py || true
