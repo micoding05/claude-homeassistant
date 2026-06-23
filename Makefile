@@ -20,7 +20,7 @@ YELLOW = \033[1;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-.PHONY: help pull push validate backup clean setup test status entities reload format-yaml check-env track
+.PHONY: help pull push validate backup clean setup test status entities reload format-yaml check-env track discover
 
 # Default target
 help:
@@ -37,6 +37,7 @@ help:
 	@echo "  $(YELLOW)entities$(NC) - Explore available entities (usage: make entities [ARGS='options'])"
 	@echo "  $(YELLOW)reload$(NC)   - Reload Home Assistant configuration (without pushing)"
 	@echo "  $(YELLOW)track$(NC)    - Track HA environment (version, integrations, devices, changes)"
+	@echo "  $(YELLOW)discover$(NC) - Discover newly added devices (created in last 30 days)"
 	@echo "  $(YELLOW)format-yaml$(NC) - Format YAML files (usage: make format-yaml [FILES='file1.yaml file2.yaml'])"
 	@echo "  $(YELLOW)check-env$(NC) - Validate environment configuration (.env file)"
 	@echo "  $(YELLOW)clean$(NC)    - Clean up temporary files and caches"
@@ -229,3 +230,8 @@ test-rsync:
 track:
 	@echo "$(GREEN)Tracking Home Assistant environment...$(NC)"
 	@. $(VENV_PATH)/bin/activate && python3 $(TOOLS_PATH)/ha_environment_tracker.py
+
+# Discover newly added devices
+discover:
+	@echo "$(GREEN)Discovering new devices (last 30 days)...$(NC)"
+	@. $(VENV_PATH)/bin/activate && python3 $(TOOLS_PATH)/ha_discovery.py
