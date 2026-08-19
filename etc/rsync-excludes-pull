@@ -24,6 +24,14 @@ home-assistant_v2.db*
 # Tooling data - belongs in the data repo's tracking/, never in ha/
 .ha_tracking/
 
+# zigbee2mqtt runtime state: changes constantly, is useless as a local
+# reference, and only shows up as permanent drift. Its configuration.yaml is
+# still pulled.
+zigbee2mqtt/database.db
+zigbee2mqtt/state.json
+zigbee2mqtt/coordinator_backup.json
+zigbee2mqtt/log/
+
 # Custom add-ons and themes (managed separately)
 custom_components/
 custom_icons/

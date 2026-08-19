@@ -39,6 +39,8 @@ def local_dir(temp_dir):
     )
     (local / "configuration.yaml").write_text("homeassistant: NEW")
     (local / "automations.yaml").write_text("automation: NEW")
+    (local / "zigbee2mqtt").mkdir()
+    (local / "zigbee2mqtt" / "database.db").write_text("stale local pairings")
     return local
 
 
@@ -66,6 +68,8 @@ def remote_dir(temp_dir):
     (remote / "configuration.yaml").write_text("homeassistant: old")
     (remote / "automations.yaml").write_text("automation: old")
 
+    (remote / "zigbee2mqtt").mkdir()
+    (remote / "zigbee2mqtt" / "database.db").write_text("live pairings")
     return remote
 
 
@@ -202,3 +206,16 @@ def test_pull_deletes_stale_local_files(temp_dir, remote_dir):
     assert not (
         local / "stale_file.yaml"
     ).exists(), "Stale files should be deleted by --delete"
+
+
+def test_push_preserves_zigbee2mqtt(local_dir, remote_dir):
+    """Push never overwrites zigbee2mqtt runtime state.
+
+    The add-on owns its pairing database and runs as a different uid, so a push
+    both reverts live pairings and leaves the file owned by root.
+    """
+    run_rsync(local_dir, remote_dir, PUSH_EXCLUDES)
+
+    assert (
+        remote_dir / "zigbee2mqtt" / "database.db"
+    ).read_text() == "live pairings", "zigbee2mqtt database must stay untouched"

@@ -12,6 +12,10 @@ home-assistant_v2.db*
 # Tooling data - must never be written to the HA server
 .ha_tracking/
 
+# Add-on runtime state. zigbee2mqtt owns its database, pairings and logs; the
+# add-on runs as uid 502, so pushing these as root also breaks file ownership.
+zigbee2mqtt/
+
 # Custom add-ons and themes (managed separately)
 custom_components/
 custom_icons/
