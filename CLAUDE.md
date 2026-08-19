@@ -6,10 +6,30 @@ This repository manages Home Assistant configuration files with automated valida
 
 **Always consult the latest Home Assistant documentation** at https://www.home-assistant.io/docs/ before suggesting configurations, automations, or integrations. HA updates frequently and syntax/features change between versions.
 
-## Project Structure
+## Code and Data Are Separate Repositories
 
-- `config/` - Contains all Home Assistant configuration files (synced from HA instance)
-- `tools/` - Validation and testing scripts
+This repository holds **only the tooling**. It is a public GitHub fork, so no
+Home Assistant data may ever be committed here.
+
+The HA data lives in a **separate private repository**, located via `HA_DATA_DIR`
+(default: `../claude-homeassistant-data`):
+
+| Location | Contents | Repository |
+|----------|----------|------------|
+| `$HA_DATA_DIR/ha/` | HA configuration and `.storage/`, mirror of the server's `/config/` | private data repo |
+| `$HA_DATA_DIR/tracking/` | Environment snapshots written by the tracking tools | private data repo |
+
+`tools/paths.py` is the single source of truth for these locations. Every tool
+takes its default from there - never hardcode a data path, and never reintroduce
+a `config/` directory in this repository. `.gitignore` blocks `config/`, `ha/`,
+`data/`, `.storage/`, `.ha_tracking/` and `secrets.yaml` as a backstop.
+
+### This Repository (code and tooling config)
+
+- `tools/` - Validation, discovery and safety scripts
+- `etc/` - Tooling configuration (rsync excludes, yamllint rules)
+- `templates/` - Example files (`secrets.yaml.example`)
+- `tests/` - Test suite
 - `venv/` - Python virtual environment with dependencies
 - `temp/` - Temporary directory for Claude to write and test code before moving to final locations
 - `Makefile` - Commands for pulling/pushing configuration
@@ -23,8 +43,8 @@ This project uses **two separate exclude files** for different sync operations:
 
 | File | Used By | Purpose |
 |------|---------|---------|
-| `.rsync-excludes-pull` | `make pull` | Less restrictive |
-| `.rsync-excludes-push` | `make push` | More restrictive |
+| `etc/rsync-excludes-pull` | `make pull` | Less restrictive |
+| `etc/rsync-excludes-push` | `make push` | More restrictive |
 
 **Why separate files?**
 - `make pull` downloads most files including `.storage/` (excluding sensitive auth files) for local reference
@@ -58,7 +78,7 @@ needed, make them manually in the Home Assistant UI:
 ### Before Making Changes
 1. Run `make pull` to ensure local files are current
 2. Identify if the change affects YAML files or `.storage/` files
-3. YAML files → edit locally, then `make push`
+3. YAML files → edit in the data repo, then `make push`
 4. `.storage/` files → use the HA UI only (manual changes)
 
 ### Before Running `make push`
@@ -91,6 +111,46 @@ needed, make them manually in the Home Assistant UI:
   - `--area AREA` - Show entities from specific area
   - `--full` - Show complete detailed output
 
+### Safety Agents
+
+Two agents guard the two riskiest moments in this workflow. Both are backed by
+deterministic tools, so they can also be run by hand.
+
+**`ha-sync-check` - run at the start of a session, before editing any YAML.**
+Compares the HA server with this checkout: SSH reachability, HA core version vs.
+the local `homeassistant` package, config drift (rsync dry run), pending updates
+and git state. A `SessionStart` hook runs the underlying tool automatically and
+only speaks up when something is off.
+
+- `make sync-check` - run the comparison manually
+- `python tools/ha_sync_check.py --json` - machine-readable output
+
+The version check matters most: when the server's HA core is newer than the venv
+package, the official validator fails with *"Storage file ... has version N which
+is newer than the max supported version"*. That is a local tooling problem, not a
+broken config. Fix it with `make pin-ha`, which reads the server's version and
+installs exactly that. `make setup` runs it automatically, so a freshly created
+venv always matches the server.
+
+**`privacy-guard` - run before every push or pull request.**
+This repo is a **public** GitHub fork; anything pushed is world-readable and
+stays in history forever. This is a purely private setup, so the agent checks
+for household data: coordinates, names, hardware inventory and presence
+patterns.
+
+- `make privacy-scan` - scan staged changes, or unpushed commits if nothing is staged
+- `python tools/privacy_scan.py --range origin/main..HEAD` - scan a PR range
+
+A `PreToolUse` hook runs the scanner before `git push`, `gh pr create` and
+`glab mr create`, and **denies the command** when it finds blocking issues. The
+scanner reads the real private values from `.env` and from the data repository
+(`ha/secrets.yaml`, `ha/.storage/`) and matches those literals against the diff,
+so hits are
+rarely false positives. It never echoes a secret's value.
+
+If a secret was ever committed, removing it in a later commit is not enough - it
+remains in history and must be rotated.
+
 ## Validation System
 
 This project includes comprehensive validation to prevent invalid configurations:
@@ -107,7 +167,7 @@ This project includes comprehensive validation to prevent invalid configurations
 
 ### Automated Validation Hooks
 
-- **Post-Edit Hook**: Runs validation after editing any YAML files in `config/`
+- **Post-Edit Hook**: Runs validation after editing any HA YAML files
 - **Pre-Push Hook**: Validates configuration before pushing to Home Assistant
 - **Blocks invalid pushes**: Prevents uploading broken configurations
 
@@ -130,7 +190,7 @@ The system tracks entities across these domains:
 ## Development Workflow
 
 1. **Pull Latest**: `make pull` to sync from HA
-2. **Edit Locally**: Modify files in `config/` directory
+2. **Edit Locally**: Modify files in `$HA_DATA_DIR/ha/` (the data repository)
 3. **Auto-Validation**: Hooks automatically validate on edits
 4. **Test Changes**: `make validate` for full test suite
 5. **Deploy**: `make push` to upload (blocked if validation fails)

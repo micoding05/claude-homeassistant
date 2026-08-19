@@ -36,7 +36,7 @@ This directory contains a complete Python development environment with modern to
 
 ### Automation
 - **pre-commit** - Git hooks for automated checks
-- **yamllint** - YAML file validation (for HA configs)
+- **yamllint** - YAML file validation (config in `etc/yamllint.yml`)
 
 ## File Structure
 
@@ -44,11 +44,11 @@ This directory contains a complete Python development environment with modern to
 public/
 ├── venv/                    # Symlinked to ../venv/
 ├── tools/                   # Python validation scripts
-├── config/                  # Home Assistant configuration
+├── etc/                     # Tooling config (rsync excludes, yamllint rules)
+├── templates/               # Example files (secrets.yaml.example)
 ├── pyproject.toml          # Python project configuration
 ├── requirements-dev.txt    # Development dependencies
 ├── .pre-commit-config.yaml # Pre-commit hook configuration
-├── .yamllint.yml          # YAML linting rules
 ├── Makefile               # Main project commands
 ├── Makefile.dev          # Development-specific commands
 └── README-DEV.md         # This file

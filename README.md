@@ -13,6 +13,40 @@ Click to play
 - **🔍 Entity Discovery**: Advanced tools to explore and search available entities
 - **⚡ Automated Hooks**: Validation runs automatically on file changes
 - **📊 Entity Registry Integration**: Real-time validation against your actual HA setup
+- **🔐 Code/Data Separation**: Your HA data never lives in this repository
+
+## 🔐 Code and Data Are Separate
+
+This repository contains **only the tooling**. Your Home Assistant data - the
+configuration, the runtime state in `.storage/`, the environment snapshots -
+lives in a **separate repository that you keep private**.
+
+```
+claude-homeassistant/            # this repo: code + tooling config (public)
+├── tools/                       #   validation, discovery, safety scripts
+├── etc/                         #   rsync excludes, yamllint rules
+└── templates/                   #   secrets.yaml.example
+
+claude-homeassistant-data/       # your data repo (PRIVATE)
+├── ha/                          #   mirror of the HA server's /config/
+└── tracking/                    #   environment snapshots
+```
+
+The location is set by `HA_DATA_DIR` in `.env` (default:
+`../claude-homeassistant-data`) and resolved centrally in `tools/paths.py`.
+
+**Why this matters**: a HA configuration contains your home's coordinates,
+device serial numbers, network layout and presence patterns. Keeping it in a
+separate repository means a stray `git add -A` in the tooling repo cannot
+publish any of it. `.gitignore` blocks `config/`, `ha/`, `data/`, `.storage/`
+and `secrets.yaml` here as a second line of defence.
+
+To set it up:
+
+```bash
+mkdir -p ../claude-homeassistant-data && git -C ../claude-homeassistant-data init
+make pull    # downloads your HA config into the data repo
+```
 
 ## 📦 Easy Installation (For Beginners)
 
@@ -60,7 +94,7 @@ setup-windows.bat
 This repository provides a complete framework for managing Home Assistant configurations with Claude Code. Here's how it works:
 
 ### Repository Structure
-- **Template Configs**: The `config/` folder contains sanitized example configurations (no secrets)
+- **Template Configs**: The `templates/` folder contains sanitized example configurations (no secrets)
 - **Validation Tools**: The `tools/` folder has all validation scripts
 - **Management Commands**: The `Makefile` contains pull/push commands
 - **Development Setup**: `pyproject.toml` and other dev files for tooling
@@ -92,10 +126,10 @@ HA_HOST=your_homeassistant_host
 HA_REMOTE_PATH=/config/
 
 # Local Configuration (optional - defaults provided)
-LOCAL_CONFIG_PATH=config/
-BACKUP_DIR=backups
+HA_DATA_DIR=../claude-homeassistant-data
 VENV_PATH=venv
 TOOLS_PATH=tools
+ETC_PATH=etc
 ```
 
 #### 2b. Set Up SSH Access to Home Assistant
@@ -184,7 +218,7 @@ To get your `HA_TOKEN`:
 make pull  # Downloads YOUR actual HA config, overwriting template files
 ```
 
-**Important**: This step replaces the template `config/` folder with your real Home Assistant configuration files.
+**Important**: This step downloads your real Home Assistant configuration into the separate private data repository at `HA_DATA_DIR` - never into this repository.
 
 #### 4. Work with Your Configuration
 - Edit your real configs locally with full validation
@@ -227,7 +261,8 @@ xcode-select --install  # Installs Command Line Tools including make
 ## 📁 Project Structure
 
 ```
-├── config/                 # Home Assistant configuration files, downloaded from HA via script
+├── etc/                    # Tooling configuration (rsync excludes, yamllint)
+├── templates/              # Example files (secrets.yaml.example)
 │   ├── configuration.yaml
 │   ├── automations.yaml
 │   ├── scripts.yaml
@@ -476,10 +511,13 @@ HA_HOST=your_homeassistant_host          # SSH hostname for HA
 HA_REMOTE_PATH=/config/                  # Remote config path
 
 # Local Configuration (optional - defaults provided)
-LOCAL_CONFIG_PATH=config/                # Local config directory
-BACKUP_DIR=backups                       # Backup directory
+HA_DATA_DIR=../claude-homeassistant-data # Private data repo (ha/ + tracking/)
 VENV_PATH=venv                          # Python virtual environment path
 TOOLS_PATH=tools                        # Tools directory
+ETC_PATH=etc                            # Tooling config directory
+
+# Note: BACKUP_DIR defaults to $HA_DATA_DIR/backups. Do not point it inside
+# this repository - HA backups contain your full configuration.
 ```
 
 ### Claude Code Settings
