@@ -21,6 +21,9 @@ home-assistant_v2.db*
 .storage/application_credentials
 .storage/core.uuid
 
+# Tooling data - belongs in the data repo's tracking/, never in ha/
+.ha_tracking/
+
 # Custom add-ons and themes (managed separately)
 custom_components/
 custom_icons/

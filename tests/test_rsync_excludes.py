@@ -1,6 +1,6 @@
 """Integration tests for rsync exclude rules.
 
-Tests that the .rsync-excludes-* files correctly:
+Tests that the etc/rsync-excludes-* files correctly:
 1. Exclude sensitive directories from transfer (pull)
 2. Protect server-side runtime state from deletion during push
 3. Allow normal config files to sync
@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-PULL_EXCLUDES = Path(__file__).parent.parent / ".rsync-excludes-pull"
-PUSH_EXCLUDES = Path(__file__).parent.parent / ".rsync-excludes-push"
+PULL_EXCLUDES = Path(__file__).parent.parent / "etc" / "rsync-excludes-pull"
+PUSH_EXCLUDES = Path(__file__).parent.parent / "etc" / "rsync-excludes-push"
 
 
 @pytest.fixture

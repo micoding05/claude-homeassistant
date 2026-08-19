@@ -10,13 +10,18 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
+try:  # running as a module (tests, imports)
+    from .paths import ha_config_dir
+except ImportError:  # running directly as a script
+    from paths import ha_config_dir
+
 
 class ValidationTestRunner:
     """Runs all validation tests and reports results."""
 
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str | None = None):
         """Initialize the test runner."""
-        self.config_dir = Path(config_dir).resolve()
+        self.config_dir = Path(config_dir or ha_config_dir()).resolve()
         self.tools_dir = Path(__file__).parent
         self.venv_dir = self.tools_dir.parent / ".venv"
         self.legacy_venv_dir = self.tools_dir.parent / "venv"
@@ -215,7 +220,7 @@ class ValidationTestRunner:
 
 def main():
     """Run main function for command line usage."""
-    config_dir = sys.argv[1] if len(sys.argv) > 1 else "config"
+    config_dir = sys.argv[1] if len(sys.argv) > 1 else None
 
     runner = ValidationTestRunner(config_dir)
     success = runner.run()

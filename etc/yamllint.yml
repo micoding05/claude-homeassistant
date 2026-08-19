@@ -49,5 +49,5 @@ rules:
 ignore: |
   secrets.yaml
   secrets.yaml.example
-  .yamllint.yml
+  etc/yamllint.yml
   .pre-commit-config.yaml

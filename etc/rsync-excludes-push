@@ -9,6 +9,9 @@ home-assistant_v2.db*
 *.db-wal
 *.log*
 
+# Tooling data - must never be written to the HA server
+.ha_tracking/
+
 # Custom add-ons and themes (managed separately)
 custom_components/
 custom_icons/

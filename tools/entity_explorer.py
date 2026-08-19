@@ -13,6 +13,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional
 
+try:  # running as a module (tests, imports)
+    from .paths import ha_config_dir
+except ImportError:  # running directly as a script
+    from paths import ha_config_dir
+
 
 def load_entity_registry(config_path: Path) -> Optional[Dict]:
     """Load and parse the entity registry file."""
@@ -270,7 +275,10 @@ def main():
         description="Explore Home Assistant Entity Registry"
     )
     parser.add_argument(
-        "--config", "-c", default="config", help="Path to HA config directory"
+        "--config",
+        "-c",
+        default=None,
+        help="Path to HA config directory (default: the data repository)",
     )
     parser.add_argument(
         "--domain", "-d", help="Show only entities from specific domain"
@@ -285,7 +293,7 @@ def main():
 
     args = parser.parse_args()
 
-    config_path = Path(args.config)
+    config_path = Path(args.config or ha_config_dir())
     if not config_path.exists():
         print(f"Error: Config directory not found: {config_path}")
         return 1

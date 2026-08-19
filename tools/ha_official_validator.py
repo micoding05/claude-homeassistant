@@ -10,13 +10,18 @@ import sys
 from pathlib import Path
 from typing import List
 
+try:  # running as a module (tests, imports)
+    from .paths import ha_config_dir
+except ImportError:  # running directly as a script
+    from paths import ha_config_dir
+
 
 class HAOfficialValidator:
     """Validates Home Assistant configuration using the official HA package."""
 
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str | None = None):
         """Initialize the HAOfficialValidator."""
-        self.config_dir = Path(config_dir).resolve()
+        self.config_dir = Path(config_dir or ha_config_dir()).resolve()
         self.errors: List[str] = []
         self.warnings: List[str] = []
         self.info: List[str] = []
@@ -165,7 +170,7 @@ class HAOfficialValidator:
 
 def main():
     """Run Home Assistant configuration validation from command line."""
-    config_dir = sys.argv[1] if len(sys.argv) > 1 else "config"
+    config_dir = sys.argv[1] if len(sys.argv) > 1 else None
 
     validator = HAOfficialValidator(config_dir)
     is_valid = validator.validate_all()

@@ -9,10 +9,16 @@ endif
 # Configuration
 HA_HOST ?= your_homeassistant_host
 HA_REMOTE_PATH ?= /config/
-LOCAL_CONFIG_PATH ?= config/
-BACKUP_DIR ?= backups
 VENV_PATH ?= .venv
 TOOLS_PATH ?= tools
+ETC_PATH ?= etc
+
+# Code and data are separate repositories. HA_DATA_DIR points at the private
+# data repo; everything HA-derived lives there, nothing of it in this repo.
+HA_DATA_DIR ?= ../claude-homeassistant-data
+LOCAL_CONFIG_PATH = $(HA_DATA_DIR)/ha/
+TRACKING_PATH = $(HA_DATA_DIR)/tracking/
+BACKUP_DIR ?= $(HA_DATA_DIR)/backups
 
 # Colors for output
 GREEN = \033[0;32m
@@ -20,7 +26,7 @@ YELLOW = \033[1;33m
 RED = \033[0;31m
 NC = \033[0m # No Color
 
-.PHONY: help pull push validate backup clean setup test status entities reload format-yaml check-env track discover duplicates
+.PHONY: help pull push validate backup clean setup test status entities reload format-yaml check-env track discover duplicates sync-check privacy-scan paths pin-ha
 
 # Default target
 help:
@@ -31,7 +37,8 @@ help:
 	@echo "  $(YELLOW)push$(NC)     - Push local config to Home Assistant (with validation)"
 	@echo "  $(YELLOW)validate$(NC) - Run all validation tests"
 	@echo "  $(YELLOW)backup$(NC)   - Create timestamped backup of current config"
-	@echo "  $(YELLOW)setup$(NC)    - Set up Python environment and dependencies"
+	@echo "  $(YELLOW)setup$(NC)    - Set up Python environment (deps + HA version pinned to server)"
+	@echo "  $(YELLOW)pin-ha$(NC)   - Pin the local homeassistant package to the server version"
 	@echo "  $(YELLOW)test$(NC)     - Run validation tests (alias for validate)"
 	@echo "  $(YELLOW)status$(NC)   - Show configuration status and entity counts"
 	@echo "  $(YELLOW)entities$(NC) - Explore available entities (usage: make entities [ARGS='options'])"
@@ -39,6 +46,9 @@ help:
 	@echo "  $(YELLOW)track$(NC)    - Track HA environment (version, integrations, devices, changes)"
 	@echo "  $(YELLOW)discover$(NC) - Discover newly added devices (created in last 30 days)"
 	@echo "  $(YELLOW)duplicates$(NC) - Audit suspicious duplicate integration entries"
+	@echo "  $(YELLOW)sync-check$(NC) - Compare HA server against local checkout (versions, drift)"
+	@echo "  $(YELLOW)privacy-scan$(NC) - Scan outgoing changes for private data"
+	@echo "  $(YELLOW)paths$(NC)    - Show where code, tooling config and data resolve to"
 	@echo "  $(YELLOW)format-yaml$(NC) - Format YAML files (usage: make format-yaml [FILES='file1.yaml file2.yaml'])"
 	@echo "  $(YELLOW)check-env$(NC) - Validate environment configuration (.env file)"
 	@echo "  $(YELLOW)clean$(NC)    - Clean up temporary files and caches"
@@ -46,7 +56,7 @@ help:
 # Pull configuration from Home Assistant
 pull: check-env
 	@echo "$(GREEN)Pulling configuration from Home Assistant...$(NC)"
-	@rsync -avz --delete --exclude-from=.rsync-excludes-pull $(HA_HOST):$(HA_REMOTE_PATH) $(LOCAL_CONFIG_PATH)
+	@rsync -avz --delete --exclude-from=$(ETC_PATH)/rsync-excludes-pull $(HA_HOST):$(HA_REMOTE_PATH) $(LOCAL_CONFIG_PATH)
 	@echo "$(GREEN)Configuration pulled successfully!$(NC)"
 	@echo "$(YELLOW)Running validation to ensure integrity...$(NC)"
 	@$(MAKE) validate
@@ -56,7 +66,7 @@ push: check-env
 	@echo "$(GREEN)Validating configuration before push...$(NC)"
 	@$(MAKE) validate
 	@echo "$(GREEN)Validation passed! Pushing to Home Assistant...$(NC)"
-	@rsync -avz --delete --exclude-from=.rsync-excludes-push $(LOCAL_CONFIG_PATH) $(HA_HOST):$(HA_REMOTE_PATH)
+	@rsync -avz --delete --exclude-from=$(ETC_PATH)/rsync-excludes-push $(LOCAL_CONFIG_PATH) $(HA_HOST):$(HA_REMOTE_PATH)
 	@echo "$(GREEN)Configuration pushed successfully!$(NC)"
 	@echo "$(GREEN)Reloading Home Assistant configuration...$(NC)"
 	@. $(VENV_PATH)/bin/activate && python $(TOOLS_PATH)/reload_config.py
@@ -79,13 +89,37 @@ backup:
 	tar -czf "$$backup_name.tar.gz" $(LOCAL_CONFIG_PATH); \
 	echo "$(GREEN)Backup created: $$backup_name.tar.gz$(NC)"
 
-# Set up Python environment and dependencies
+# Set up Python environment and dependencies.
+# The homeassistant package must match the version running on the server: an
+# older package cannot read newer .storage schemas and makes the official
+# validator fail. We therefore pin it to whatever the server reports.
 setup:
 	@echo "$(GREEN)Setting up Python environment...$(NC)"
 	@python3 -m venv $(VENV_PATH)
 	@. $(VENV_PATH)/bin/activate && pip install --upgrade pip
-	@. $(VENV_PATH)/bin/activate && pip install homeassistant voluptuous pyyaml jsonschema requests
+	@echo "$(GREEN)Installing dependencies...$(NC)"
+	@. $(VENV_PATH)/bin/activate && pip install -r requirements-dev.txt
+	@$(MAKE) --no-print-directory pin-ha
 	@echo "$(GREEN)Setup complete!$(NC)"
+
+# Pin the local homeassistant package to the version the server runs.
+pin-ha:
+	@server_version=$$(ssh -o ConnectTimeout=8 -o BatchMode=yes $(HA_HOST) \
+		"cat /config/.HA_VERSION" 2>/dev/null | tr -d '[:space:]'); \
+	if [ -z "$$server_version" ]; then \
+		echo "$(YELLOW)Could not reach $(HA_HOST) to read its HA version.$(NC)"; \
+		echo "$(YELLOW)Pin it manually once the server is reachable:$(NC)"; \
+		echo "$(YELLOW)  make pin-ha$(NC)"; \
+	else \
+		local_version=$$(. $(VENV_PATH)/bin/activate && python -c \
+			"import importlib.metadata as m; print(m.version('homeassistant'))" 2>/dev/null); \
+		if [ "$$server_version" = "$$local_version" ]; then \
+			echo "$(GREEN)homeassistant $$local_version already matches the server.$(NC)"; \
+		else \
+			echo "$(GREEN)Pinning homeassistant to the server version $$server_version...$(NC)"; \
+			. $(VENV_PATH)/bin/activate && pip install --upgrade "homeassistant==$$server_version"; \
+		fi; \
+	fi
 
 # Show configuration status
 status: check-setup
@@ -178,6 +212,12 @@ check-env:
 	@if [ ! -f ".env" ]; then \
 		echo "$(YELLOW)Warning: .env file not found. Copy .env.example to .env and configure your settings.$(NC)"; \
 	fi
+	@if [ ! -d "$(HA_DATA_DIR)" ]; then \
+		echo "$(RED)Error: data repository not found at $(HA_DATA_DIR).$(NC)"; \
+		echo "$(YELLOW)HA data lives in a separate private repository.$(NC)"; \
+		echo "$(YELLOW)Clone it there, or set HA_DATA_DIR in your .env file.$(NC)"; \
+		exit 1; \
+	fi
 	@if ! command -v rsync >/dev/null 2>&1; then \
 		echo "$(RED)Error: rsync not found in PATH.$(NC)"; \
 		echo "$(YELLOW)Install via Homebrew: brew install rsync$(NC)"; \
@@ -241,3 +281,40 @@ discover:
 duplicates:
 	@echo "$(GREEN)Auditing suspicious duplicate config entries...$(NC)"
 	@. $(VENV_PATH)/bin/activate && python3 $(TOOLS_PATH)/ha_duplicates.py || true
+
+# Show where code, tooling config and data actually resolve to.
+# Prints only path variables - never tokens or credentials.
+paths:
+	@echo "$(GREEN)Effective paths$(NC)"
+	@echo "==============================================="
+	@echo "  Code repo        : $(CURDIR)"
+	@echo "  Tooling config   : $(ETC_PATH)/"
+	@echo "  Tools            : $(TOOLS_PATH)/"
+	@echo "  Virtualenv       : $(VENV_PATH)/"
+	@echo ""
+	@echo "  Data repo        : $(HA_DATA_DIR)"
+	@echo "    HA config      : $(LOCAL_CONFIG_PATH)"
+	@echo "    Tracking       : $(TRACKING_PATH)"
+	@echo "    Backups        : $(BACKUP_DIR)"
+	@echo ""
+	@echo "  HA host          : $(HA_HOST)"
+	@echo "  HA remote path   : $(HA_REMOTE_PATH)"
+	@echo ""
+	@if [ ! -d "$(HA_DATA_DIR)" ]; then \
+		echo "$(RED)  ! data repo missing$(NC)"; \
+	elif echo "$(BACKUP_DIR)" | grep -qv "^$(HA_DATA_DIR)"; then \
+		echo "$(YELLOW)  ! BACKUP_DIR is outside the data repo$(NC)"; \
+		echo "$(YELLOW)    HA backups would land in this public repo.$(NC)"; \
+		echo "$(YELLOW)    Remove BACKUP_DIR from .env to use the default.$(NC)"; \
+	else \
+		echo "$(GREEN)  ✓ data locations consistent$(NC)"; \
+	fi
+
+# Compare the HA server against this checkout (versions, drift, git state)
+# Drift is informational, so a non-zero exit must not fail the make run.
+sync-check:
+	@. $(VENV_PATH)/bin/activate && python3 $(TOOLS_PATH)/ha_sync_check.py || true
+
+# Scan outgoing changes for private data before publishing
+privacy-scan:
+	@. $(VENV_PATH)/bin/activate && python3 $(TOOLS_PATH)/privacy_scan.py

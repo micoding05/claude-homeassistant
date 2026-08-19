@@ -12,6 +12,11 @@ from typing import Any, Dict, List, Optional, Set, TypedDict
 
 import yaml
 
+try:  # running as a module (tests, imports)
+    from .paths import ha_config_dir
+except ImportError:  # running directly as a script
+    from paths import ha_config_dir
+
 
 class DomainSummary(TypedDict):
     """Type definition for domain summary dictionary."""
@@ -106,9 +111,9 @@ class ReferenceValidator:
     # not entity IDs. See: home-assistant.io/integrations/persistent_notification/
     BUILTIN_DOMAINS: set = set()
 
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str | None = None):
         """Initialize the ReferenceValidator."""
-        self.config_dir = Path(config_dir)
+        self.config_dir = Path(config_dir or ha_config_dir())
         self.storage_dir = self.config_dir / ".storage"
         self.errors: List[str] = []
         self.warnings: List[str] = []
@@ -902,7 +907,7 @@ class ReferenceValidator:
 
 def main():
     """Run entity and device reference validation from command line."""
-    config_dir = sys.argv[1] if len(sys.argv) > 1 else "config"
+    config_dir = sys.argv[1] if len(sys.argv) > 1 else None
 
     validator = ReferenceValidator(config_dir)
     is_valid = validator.validate_all()

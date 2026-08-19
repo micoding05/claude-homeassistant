@@ -1,18 +1,30 @@
 # Home Assistant Configuration Management - .gitignore
 
-# Secrets and sensitive data
-config/*.yaml
-!config/*.example
-config/.storage/
-config/home-assistant.log*
-config/OZW_Log.txt
-config/ip_bans.yaml
-config/.uuid
-config/.HA_VERSION
+# ==========================================================
+# BOUNDARY: Home Assistant Nutzdaten gehoeren NICHT hierher
+# ==========================================================
+# Code und Daten sind getrennte Repositories. Die HA-Konfiguration,
+# der Runtime-State und die Tracking-Snapshots liegen im privaten
+# Daten-Repo (HA_DATA_DIR, Standard: ../claude-homeassistant-data).
+#
+# Diese Regeln fangen den Fall ab, dass HA-Daten versehentlich wieder
+# in diesem oeffentlichen Repo landen.
+config/
+ha/
+data/
+.storage/
+.ha_tracking/
+secrets.yaml
+!templates/*.example
 
 # Python
 venv/
 venv
+# .venv normally ignores itself via the .gitignore that python -m venv writes
+# inside it. Do not rely on that - a rebuild with a different tool would expose
+# the whole dependency tree in this public repo.
+.venv/
+.venv
 __pycache__/
 *.py[cod]
 *.pyc
@@ -73,38 +85,17 @@ node_modules/
 *.pem
 *.key
 id_rsa*
-config/*.key
-config/*.token
-config/*.pid
-config/*.uuid
 
 # Database files
 *.db
 *.db-shm
 *.db-wal
 
-# Home Assistant specific temporary files
-config/deps/
-config/tts/
-config/.shopping_list.json
-config/.google.token
-config/nest/
-config/.cloud/
-config/.ha_run.lock
-config/blueprints/
-config/zigbee2mqtt/
-config/.ha_tracking/
-
 # Claude Code configuration and workspace data
 .claude/
 
-# Custom components (managed by HACS)
-config/custom_components/
-
-# Personal configuration that shouldn't be shared
-config/known_devices.yaml
-config/automations_backup/
-config/scripts_backup/
+# Personal scratch notes - may reference real hosts and paths
+.claude-notes.md
 
 # Test artifacts
 .pytest_cache/
@@ -149,6 +140,3 @@ coverage.xml
 # Development artifacts
 .python_check.log
 *.log
-
-# Virtual Environment symlink (points to ../venv)
-# Note: Both venv/ and venv symlink are ignored above

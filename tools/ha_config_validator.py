@@ -12,6 +12,11 @@ from typing import Any, Dict, List
 
 import yaml
 
+try:  # running as a module (tests, imports)
+    from .paths import ha_config_dir
+except ImportError:  # running directly as a script
+    from paths import ha_config_dir
+
 
 class HAYamlLoader(yaml.SafeLoader):
     """Custom YAML loader that handles Home Assistant specific tags."""
@@ -78,9 +83,9 @@ HAYamlLoader.add_constructor("!secret", secret_constructor)
 class HAConfigValidator:
     """Validates Home Assistant configuration using HA's check_config tool."""
 
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str | None = None):
         """Initialize the validator with config directory."""
-        self.config_dir = Path(config_dir).resolve()
+        self.config_dir = Path(config_dir or ha_config_dir()).resolve()
         self.errors: List[str] = []
         self.warnings: List[str] = []
         self.info: List[str] = []
@@ -440,7 +445,7 @@ class HAConfigValidator:
 
 def main():
     """Run main function for command line usage."""
-    config_dir = sys.argv[1] if len(sys.argv) > 1 else "config"
+    config_dir = sys.argv[1] if len(sys.argv) > 1 else None
 
     validator = HAConfigValidator(config_dir)
     is_valid = validator.validate_all()

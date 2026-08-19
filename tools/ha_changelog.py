@@ -12,12 +12,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+try:  # running as a module (tests, imports)
+    from .paths import tracking_dir
+except ImportError:  # running directly as a script
+    from paths import tracking_dir
+
 
 class HAChangelogViewer:
     """View Home Assistant environment changelog and state changes."""
 
-    def __init__(self, config_dir: Path = Path("config")):
-        self.tracking_dir = config_dir / ".ha_tracking"
+    def __init__(self, tracking: Path | None = None):
+        self.tracking_dir = Path(tracking or tracking_dir())
         self.snapshots_dir = self.tracking_dir / "snapshots"
         self.current_file = self.tracking_dir / "current_snapshot.json"
 

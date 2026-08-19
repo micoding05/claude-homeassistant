@@ -7,6 +7,11 @@ from typing import List
 
 import yaml
 
+try:  # running as a module (tests, imports)
+    from .paths import ha_config_dir
+except ImportError:  # running directly as a script
+    from paths import ha_config_dir
+
 
 class HAYamlLoader(yaml.SafeLoader):
     """Custom YAML loader that handles Home Assistant specific tags."""
@@ -73,9 +78,9 @@ HAYamlLoader.add_constructor("!secret", secret_constructor)
 class YAMLValidator:
     """Validates YAML syntax and basic structure for Home Assistant files."""
 
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str | None = None):
         """Initialize the YAMLValidator."""
-        self.config_dir = Path(config_dir)
+        self.config_dir = Path(config_dir or ha_config_dir())
         self.errors: List[str] = []
         self.warnings: List[str] = []
 
@@ -297,7 +302,7 @@ class YAMLValidator:
 
 def main():
     """Run YAML syntax validation from command line."""
-    config_dir = sys.argv[1] if len(sys.argv) > 1 else "config"
+    config_dir = sys.argv[1] if len(sys.argv) > 1 else None
 
     validator = YAMLValidator(config_dir)
     is_valid = validator.validate_all()

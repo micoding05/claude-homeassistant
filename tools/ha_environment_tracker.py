@@ -11,15 +11,20 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+try:  # running as a module (tests, imports)
+    from .paths import ha_config_dir, tracking_dir
+except ImportError:  # running directly as a script
+    from paths import ha_config_dir, tracking_dir
+
 
 class HAEnvironmentTracker:
     """Track Home Assistant environment changes over time."""
 
-    def __init__(self, config_dir: Path = Path("config")):
-        self.config_dir = Path(config_dir)
+    def __init__(self, config_dir: Path | None = None, tracking: Path | None = None):
+        self.config_dir = Path(config_dir or ha_config_dir())
         self.storage_dir = self.config_dir / ".storage"
-        self.tracker_dir = self.config_dir / ".ha_tracking"
-        self.tracker_dir.mkdir(exist_ok=True)
+        self.tracker_dir = Path(tracking or tracking_dir())
+        self.tracker_dir.mkdir(parents=True, exist_ok=True)
 
         self.current_data = {}
         self.previous_data = {}
@@ -138,11 +143,12 @@ class HAEnvironmentTracker:
                         )
 
                 # Count by manufacturer
-                mfg = device.get("manufacturer", "Unknown")
-                if mfg:
-                    summary["by_manufacturer"][mfg] = (
-                        summary["by_manufacturer"].get(mfg, 0) + 1
-                    )
+                # An explicit null in the registry means "no manufacturer",
+                # which a .get() default would not catch.
+                mfg = device.get("manufacturer") or "Unknown"
+                summary["by_manufacturer"][mfg] = (
+                    summary["by_manufacturer"].get(mfg, 0) + 1
+                )
 
         return summary
 
