@@ -5,6 +5,7 @@ isort>=5.12.0
 flake8>=7.0.0
 mypy>=1.8.0
 pylint>=3.0.0
+yamllint>=1.35.0
 
 # Pre-commit hooks
 pre-commit>=3.6.0
@@ -22,6 +23,12 @@ mkdocs>=1.5.0
 mkdocs-material>=9.5.0
 
 # Home Assistant related
+#
+# Deliberately NOT pinned here: the correct version is whatever your HA server
+# runs, which differs per user. `make setup` pins it to the server version
+# automatically. A package older than the server makes the official validator
+# fail with "Storage file ... has version N which is newer than the max
+# supported version" - a local tooling problem, not a broken config.
 homeassistant>=2024.1.0
 voluptuous>=0.14.0
 pyyaml>=6.0.0

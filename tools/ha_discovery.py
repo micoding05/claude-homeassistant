@@ -3,13 +3,19 @@
 
 import json
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+
+try:  # running as a module (tests, imports)
+    from .paths import storage_dir as storage_path
+    from .paths import tracking_dir
+except ImportError:  # running directly as a script
+    from paths import storage_dir as storage_path
+    from paths import tracking_dir
 
 
 def show_new_devices():
     """Show devices that exist but weren't tracked before."""
-    storage_dir = Path("config/.storage")
-    tracker_dir = Path("config/.ha_tracking")
+    storage_dir = storage_path()
+    tracker_dir = tracking_dir()
 
     # Get first snapshot (baseline for comparison)
     snapshots_dir = tracker_dir / "snapshots"
@@ -52,12 +58,15 @@ def show_new_devices():
 
     # Device count change
     if curr_devices > first_devices:
-        print(f"\n📱 DEVICE COUNT CHANGE: {first_devices} → {curr_devices} (+{curr_devices - first_devices})")
+        print(
+            f"\n📱 DEVICE COUNT CHANGE: {first_devices} → {curr_devices} (+{curr_devices - first_devices})"
+        )
 
-        # Group new devices by manufacturer
+        # Group new devices by manufacturer. The registry stores an explicit
+        # null for devices without one, so a plain .get() default is not enough.
         manufacturers = {}
         for device in all_devices:
-            mfg = device.get("manufacturer", "Unknown")
+            mfg = device.get("manufacturer") or "Unknown"
             if mfg not in manufacturers:
                 manufacturers[mfg] = []
             manufacturers[mfg].append(device)
@@ -74,7 +83,7 @@ def show_new_devices():
                     try:
                         created_dt = datetime.fromisoformat(created)
                         if created_dt > datetime.now(timezone.utc) - timedelta(days=14):
-                            recent.append((dev.get("name", "Unknown"), created[:10]))
+                            recent.append((dev.get("name") or "Unknown", created[:10]))
                     except Exception:
                         pass
 
@@ -93,7 +102,11 @@ def show_new_devices():
             entities_by_domain[domain].append(entity)
 
     print(f"\n🏠 ENTITIES BY DOMAIN:")
-    for domain in sorted(entities_by_domain.keys(), key=lambda x: len(entities_by_domain[x]), reverse=True)[:15]:
+    for domain in sorted(
+        entities_by_domain.keys(),
+        key=lambda x: len(entities_by_domain[x]),
+        reverse=True,
+    )[:15]:
         count = len(entities_by_domain[domain])
         print(f"  {domain:20} | {count:3} entities")
 
@@ -106,11 +119,13 @@ def show_new_devices():
                 # Parse ISO format datetime with timezone info
                 created_dt = datetime.fromisoformat(created)
                 if created_dt > datetime.now(timezone.utc) - timedelta(days=30):
-                    all_new.append({
-                        "entity_id": entity.get("entity_id", ""),
-                        "platform": entity.get("platform", ""),
-                        "date": created[:10],
-                    })
+                    all_new.append(
+                        {
+                            "entity_id": entity.get("entity_id", ""),
+                            "platform": entity.get("platform", ""),
+                            "date": created[:10],
+                        }
+                    )
             except Exception:
                 pass
 
